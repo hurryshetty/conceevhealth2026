@@ -51,7 +51,10 @@ const Login = () => {
     const { data, error } = await supabase.auth.signUp({
       email: signupForm.email,
       password: signupForm.password,
-      options: { data: { full_name: signupForm.name } },
+      options: {
+        data: { full_name: signupForm.name },
+        emailRedirectTo: `${window.location.origin}/login`,
+      },
     });
     if (error) {
       toast({ title: "Signup failed", description: error.message, variant: "destructive" });
