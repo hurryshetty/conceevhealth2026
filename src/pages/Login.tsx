@@ -1,100 +1,170 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { ROLE_HOME, AppRole } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { supabase } from "@/lib/supabase";
-import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Heart } from "lucide-react";
 
-export default function Login() {
-  const [isSignUp, setIsSignUp] = useState(false);
+const Login = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const [loginForm, setLoginForm] = useState({ email: "", password: "" });
+  const [signupForm, setSignupForm] = useState({ name: "", email: "", password: "", confirm: "" });
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
-    const formData = new FormData(e.currentTarget);
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
-
-    try {
-      if (isSignUp) {
-        const name = formData.get("name") as string;
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { name } },
-        });
-        if (error) throw error;
-        toast.success("Account created! Please check your email to verify.");
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        toast.success("Welcome back!");
-        window.location.href = "/dashboard";
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Authentication failed");
-    } finally {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: loginForm.email,
+      password: loginForm.password,
+    });
+    if (error) {
+      toast({ title: "Login failed", description: error.message, variant: "destructive" });
       setLoading(false);
+      return;
     }
+    if (data.user) {
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", data.user.id)
+        .maybeSingle();
+      const role = (roleData?.role as AppRole) ?? "patient";
+      navigate(ROLE_HOME[role] ?? "/patient");
+    }
+    setLoading(false);
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (signupForm.password !== signupForm.confirm) {
+      toast({ title: "Passwords don't match", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    const { data, error } = await supabase.auth.signUp({
+      email: signupForm.email,
+      password: signupForm.password,
+      options: { data: { full_name: signupForm.name } },
+    });
+    if (error) {
+      toast({ title: "Signup failed", description: error.message, variant: "destructive" });
+      setLoading(false);
+      return;
+    }
+    if (data.user) {
+      await supabase.from("user_roles").insert({ user_id: data.user.id, role: "patient" });
+      toast({ title: "Account created!", description: "Please check your email to verify." });
+      navigate("/patient");
+    }
+    setLoading(false);
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center bg-gradient-to-br from-blue-light to-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <Link to="/" className="flex items-center justify-center gap-2 mb-4">
-            <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xl">C</span>
-            </div>
-          </Link>
-          <CardTitle className="text-2xl font-serif">
-            {isSignUp ? "Create an Account" : "Welcome Back"}
-          </CardTitle>
-          <CardDescription>
-            {isSignUp
-              ? "Sign up to start managing your practice"
-              : "Sign in to your Coneev Health account"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {isSignUp && (
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input id="name" name="name" placeholder="Dr. John Doe" required />
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" placeholder="you@example.com" required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" name="password" type="password" placeholder="Enter your password" required minLength={6} />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Please wait..." : isSignUp ? "Create Account" : "Sign In"}
-            </Button>
-          </form>
-
-          <div className="mt-6 text-center text-sm">
-            <span className="text-muted-foreground">
-              {isSignUp ? "Already have an account?" : "Don't have an account?"}
-            </span>{" "}
-            <button
-              type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-primary font-medium hover:underline"
-            >
-              {isSignUp ? "Sign In" : "Sign Up"}
-            </button>
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <Heart className="h-8 w-8 text-primary fill-primary" />
+            <span className="font-serif text-3xl font-bold text-foreground">Conceev Health</span>
           </div>
-        </CardContent>
-      </Card>
+          <p className="text-muted-foreground">Your healthcare journey starts here</p>
+        </div>
+
+        <div className="bg-card border border-border rounded-2xl p-8 shadow-sm">
+          <Tabs defaultValue="login">
+            <TabsList className="grid grid-cols-2 w-full mb-6">
+              <TabsTrigger value="login">Sign In</TabsTrigger>
+              <TabsTrigger value="signup">Register</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="login">
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input
+                    type="email" required
+                    placeholder="you@example.com"
+                    value={loginForm.email}
+                    onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Password</Label>
+                  <Input
+                    type="password" required
+                    placeholder="••••••••"
+                    value={loginForm.password}
+                    onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Signing in..." : "Sign In"}
+                </Button>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="signup">
+              <form onSubmit={handleSignup} className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Full Name</Label>
+                  <Input
+                    required
+                    placeholder="Your full name"
+                    value={signupForm.name}
+                    onChange={(e) => setSignupForm({ ...signupForm, name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input
+                    type="email" required
+                    placeholder="you@example.com"
+                    value={signupForm.email}
+                    onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Password</Label>
+                  <Input
+                    type="password" required minLength={6}
+                    placeholder="Min 6 characters"
+                    value={signupForm.password}
+                    onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Confirm Password</Label>
+                  <Input
+                    type="password" required
+                    placeholder="Repeat password"
+                    value={signupForm.confirm}
+                    onChange={(e) => setSignupForm({ ...signupForm, confirm: e.target.value })}
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Creating account..." : "Create Account"}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
+
+          <p className="text-center text-xs text-muted-foreground mt-6">
+            Staff?{" "}
+            <a href="/admin/login" className="text-primary hover:underline">
+              Admin login
+            </a>
+          </p>
+        </div>
+      </div>
     </div>
   );
-}
+};
+
+export default Login;
