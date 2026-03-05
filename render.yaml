@@ -5,10 +5,16 @@ services:
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     envVars:
+      - key: NODE_VERSION
+        value: "20"
       - key: VITE_SUPABASE_URL
         value: https://dlwiktowlhbrlcjeojcc.supabase.co
       - key: VITE_SUPABASE_PUBLISHABLE_KEY
         value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsd2lrdG93bGhicmxjamVvamNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1ODE1ODMsImV4cCI6MjA4NzE1NzU4M30.LxNDV4FrhS_kRlQodQ5kUnvVW-5Ux3l0DZSWRj9_YSY
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
     routes:
       - type: rewrite
         source: /*
