@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { StatusBadge } from "./AdminVerification";
 
 const AdminDoctors = () => {
   const [search, setSearch] = useState("");
@@ -65,6 +66,7 @@ const AdminDoctors = () => {
                 <TableHead>Experience</TableHead>
                 <TableHead>Cities</TableHead>
                 <TableHead>Fee</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -76,6 +78,7 @@ const AdminDoctors = () => {
                   <TableCell>{d.experience}</TableCell>
                   <TableCell>{(d.cities || []).join(", ")}</TableCell>
                   <TableCell>{d.consultation_fee}</TableCell>
+                  <TableCell><StatusBadge status={d.status || "DRAFT"} /></TableCell>
                   <TableCell>
                     <div className="flex gap-1">
                       <Button size="icon" variant="ghost" onClick={() => navigate(`/admin/doctors/${d.id}/edit`)}>
@@ -90,7 +93,7 @@ const AdminDoctors = () => {
               ))}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">No doctors found</TableCell>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No doctors found</TableCell>
                 </TableRow>
               )}
             </TableBody>

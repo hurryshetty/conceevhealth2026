@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { StatusBadge } from "./AdminVerification";
 import { useCities } from "@/hooks/useLocations";
 
 interface LocationForm {
@@ -101,6 +102,7 @@ const AdminLocations = () => {
               <TableHead>Area</TableHead>
               <TableHead>City</TableHead>
               <TableHead>Surgeries</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead className="w-[100px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -111,6 +113,7 @@ const AdminLocations = () => {
                 <TableCell>{l.area}</TableCell>
                 <TableCell>{l.cities?.name || "-"}</TableCell>
                 <TableCell className="max-w-[200px] truncate">{(l.surgeries || []).join(", ")}</TableCell>
+                <TableCell><StatusBadge status={l.status || "DRAFT"} /></TableCell>
                 <TableCell>
                   <div className="flex gap-1">
                     <Button size="icon" variant="ghost" onClick={() => openEdit(l)}><Pencil className="h-4 w-4" /></Button>

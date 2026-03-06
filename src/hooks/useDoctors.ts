@@ -35,6 +35,7 @@ export const useDoctors = () => {
       const { data, error } = await supabase
         .from("doctors")
         .select("*")
+        .eq("is_published", true)
         .order("created_at");
       if (error) throw error;
       return data as DoctorData[];
@@ -50,6 +51,7 @@ export const useDoctorBySlug = (slug: string) => {
         .from("doctors")
         .select("*")
         .eq("slug", slug)
+        .eq("is_published", true)
         .maybeSingle();
       if (error) throw error;
       if (!doctor) return null;

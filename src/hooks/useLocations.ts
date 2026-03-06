@@ -37,6 +37,7 @@ export const useLocations = () => {
       const { data, error } = await supabase
         .from("locations")
         .select("*, cities(name)")
+        .eq("is_published", true)
         .order("area");
       if (error) throw error;
       return (data as any[]).map((l) => ({
