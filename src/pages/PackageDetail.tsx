@@ -8,6 +8,7 @@ import LeadFormModal from "@/components/LeadFormModal";
 import { usePackageBySlug, usePackages } from "@/hooks/usePackages";
 import { useLocations } from "@/hooks/useLocations";
 import { getIconByName } from "@/lib/icons";
+import { formatPrice } from "@/lib/utils";
 
 const PackageDetail = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -192,7 +193,7 @@ const PackageDetail = () => {
             <div>
               <div className="bg-card rounded-2xl border border-border p-6 sticky top-24">
                 <p className="text-sm text-muted-foreground mb-1">Starting at</p>
-                <p className="text-3xl font-bold text-primary mb-1">{pkg.price}</p>
+                <p className="text-3xl font-bold text-primary mb-1">{formatPrice(pkg.price)}</p>
                 <p className="text-xs text-muted-foreground mb-6">Fixed price · No hidden costs</p>
                 <Button className="w-full rounded-full mb-3" size="lg" onClick={() => setFormOpen(true)}>
                   Book Free Consultation
@@ -239,7 +240,7 @@ const PackageDetail = () => {
                       </div>
                       <p className="text-sm text-muted-foreground mb-4 flex-1">{rp.description}</p>
                       <div className="flex items-center justify-between">
-                        <span className="text-lg font-bold text-primary">{rp.price}</span>
+                        <span className="text-lg font-bold text-primary">{formatPrice(rp.price)}</span>
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                           <MapPin className="h-3 w-3" /> {rp.cities.join(", ")}
                         </span>

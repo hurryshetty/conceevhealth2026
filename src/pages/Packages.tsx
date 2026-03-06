@@ -8,6 +8,7 @@ import LeadFormModal from "@/components/LeadFormModal";
 import { useSpecialties } from "@/hooks/useSpecialties";
 import { usePackages } from "@/hooks/usePackages";
 import { getIconByName } from "@/lib/icons";
+import { formatPrice } from "@/lib/utils";
 
 const cityOptions = ["All Cities", "Bangalore", "Hyderabad"] as const;
 
@@ -99,7 +100,7 @@ const Packages = () => {
                     <h3 className="font-serif text-lg font-bold text-foreground mb-1">{pkg.title}</h3>
                     <p className="text-sm text-muted-foreground mb-3 flex-1">{pkg.description}</p>
                     <p className="text-xl font-bold text-foreground mb-1">
-                      Starting at <span className="text-primary">{pkg.price}</span>
+                      Starting at <span className="text-primary">{formatPrice(pkg.price)}</span>
                     </p>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground mb-4">
                       <MapPin className="h-3 w-3" />

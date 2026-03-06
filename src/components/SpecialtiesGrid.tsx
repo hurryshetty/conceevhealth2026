@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useSpecialties } from "@/hooks/useSpecialties";
 import { usePackages } from "@/hooks/usePackages";
 import { getIconByName } from "@/lib/icons";
+import { formatPrice } from "@/lib/utils";
 
 const SpecialtiesGrid = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -68,7 +69,7 @@ const SpecialtiesGrid = () => {
                 <h3 className="font-serif text-lg font-bold mb-1 text-foreground">{s.title}</h3>
                 <p className="text-sm text-muted-foreground mb-3 flex-1">{s.description}</p>
                 <p className="text-sm font-semibold text-foreground mb-4">
-                  Starting at <span className="text-primary">{s.price}</span>
+                  Starting at <span className="text-primary">{formatPrice(s.price)}</span>
                 </p>
                 <Link to={`/packages/${s.slug}`}>
                   <Button variant="outline" size="sm" className="rounded-full gap-1.5">
