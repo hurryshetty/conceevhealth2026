@@ -78,7 +78,8 @@ const AdminSpecialties = () => {
         <Button onClick={openCreate} className="gap-2"><Plus className="h-4 w-4" /> Add Specialty</Button>
       </div>
 
-      <div className="bg-card rounded-xl border border-border">
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -104,6 +105,7 @@ const AdminSpecialties = () => {
             ))}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

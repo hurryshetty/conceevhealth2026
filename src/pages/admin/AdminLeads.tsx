@@ -48,7 +48,8 @@ const AdminLeads = () => {
         <Input placeholder="Search leads..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
       </div>
 
-      <div className="bg-card rounded-xl border border-border">
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -79,6 +80,7 @@ const AdminLeads = () => {
             ))}
           </TableBody>
         </Table>
+        </div>
         {filtered.length === 0 && (
           <p className="text-center text-muted-foreground py-8">No leads found.</p>
         )}

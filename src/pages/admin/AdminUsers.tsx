@@ -160,6 +160,7 @@ const AdminUsers = () => {
         <p className="text-muted-foreground">Loading users...</p>
       ) : (
         <div className="bg-card rounded-xl border border-border overflow-hidden">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -189,32 +190,36 @@ const AdminUsers = () => {
                   <TableCell className="text-muted-foreground text-sm">{formatDate(user.last_sign_in_at)}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{formatDate(user.created_at)}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1.5">
+                    <div className="flex items-center justify-end gap-1">
                       <Button
-                        variant="outline" size="sm"
+                        variant="outline" size="icon"
+                        title="Change Role"
                         onClick={() => { setRoleDialog(user); setSelectedRole(user.role); }}
                       >
-                        <UserCog className="h-3.5 w-3.5 mr-1" /> Role
+                        <UserCog className="h-3.5 w-3.5" />
                       </Button>
                       <Button
-                        variant="outline" size="sm"
+                        variant="outline" size="icon"
+                        title="Change Password"
                         onClick={() => { setPasswordDialog(user); setNewPassword(""); }}
                       >
-                        <KeyRound className="h-3.5 w-3.5 mr-1" /> Password
+                        <KeyRound className="h-3.5 w-3.5" />
                       </Button>
                       <Button
-                        variant={user.banned ? "default" : "outline"} size="sm"
+                        variant={user.banned ? "default" : "outline"} size="icon"
+                        title={user.banned ? "Activate" : "Deactivate"}
                         onClick={() => toggleStatusMutation.mutate({ user_id: user.id, ban: !user.banned })}
                         disabled={toggleStatusMutation.isPending}
                       >
                         {user.banned
-                          ? <><Shield className="h-3.5 w-3.5 mr-1" /> Activate</>
-                          : <><ShieldOff className="h-3.5 w-3.5 mr-1" /> Deactivate</>
+                          ? <Shield className="h-3.5 w-3.5" />
+                          : <ShieldOff className="h-3.5 w-3.5" />
                         }
                       </Button>
                       <Button
-                        variant="ghost" size="sm"
+                        variant="ghost" size="icon"
                         className="text-destructive hover:text-destructive"
+                        title="Delete"
                         onClick={() => setDeleteTarget(user)}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -225,6 +230,7 @@ const AdminUsers = () => {
               ))}
             </TableBody>
           </Table>
+          </div>
         </div>
       )}
 
