@@ -12,11 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Shield, ShieldOff, KeyRound, Users, Plus, Trash2, UserCog, LayoutDashboard, Stethoscope, Building2, ClipboardList, User } from "lucide-react";
 
-const FALLBACK_URL = "https://rjmuhomeqydszmerlqrh.supabase.co";
-const FALLBACK_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqbXVob21lcXlkc3ptZXJscXJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTc5NTEsImV4cCI6MjA4ODI5Mzk1MX0.-AePEE5w3zgFwHzgtKfnlPuhRGAKKuTBtPg3BHcEnAA";
+const SUPABASE_URL = "https://dlwiktowlhbrlcjeojcc.supabase.co";
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
-const getUrl = () => import.meta.env.VITE_SUPABASE_URL || FALLBACK_URL;
-const getKey = () => import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || FALLBACK_KEY;
+const getUrl = () => import.meta.env.VITE_SUPABASE_URL || SUPABASE_URL;
+const getKey = () => SUPABASE_KEY;
 
 const ROLES = [
   { value: "admin",       label: "Admin",       icon: LayoutDashboard, description: "Full access to all admin features, users, and settings", color: "bg-red-100 text-red-800 border-red-200" },
