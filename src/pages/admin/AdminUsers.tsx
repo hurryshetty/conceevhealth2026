@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Shield, ShieldOff, KeyRound, Users, Plus, Trash2, UserCog } from "lucide-react";
+import { Shield, ShieldOff, KeyRound, Users, Plus, Trash2, UserCog, LayoutDashboard, Stethoscope, Building2, ClipboardList, User } from "lucide-react";
 
 const FALLBACK_URL = "https://rjmuhomeqydszmerlqrh.supabase.co";
 const FALLBACK_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqbXVob21lcXlkc3ptZXJscXJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTc5NTEsImV4cCI6MjA4ODI5Mzk1MX0.-AePEE5w3zgFwHzgtKfnlPuhRGAKKuTBtPg3BHcEnAA";
@@ -19,9 +19,24 @@ const getUrl = () => import.meta.env.VITE_SUPABASE_URL || FALLBACK_URL;
 const getKey = () => import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || FALLBACK_KEY;
 
 const ROLES = [
-  { value: "admin", label: "Admin", description: "Full access to all admin features" },
-  { value: "user", label: "User", description: "Standard user access" },
+  { value: "admin",       label: "Admin",       icon: LayoutDashboard, description: "Full access to all admin features, users, and settings", color: "bg-red-100 text-red-800 border-red-200" },
+  { value: "coordinator", label: "Coordinator",  icon: ClipboardList,   description: "Manage cases, patient follow-ups, and communications", color: "bg-purple-100 text-purple-800 border-purple-200" },
+  { value: "doctor",      label: "Doctor",       icon: Stethoscope,     description: "View and manage assigned cases and patient records", color: "bg-blue-100 text-blue-800 border-blue-200" },
+  { value: "hospital",    label: "Hospital",     icon: Building2,       description: "Manage facility cases, staff, and hospital operations", color: "bg-teal-100 text-teal-800 border-teal-200" },
+  { value: "patient",     label: "Patient",      icon: User,            description: "Submit cases, view appointments and health records", color: "bg-green-100 text-green-800 border-green-200" },
+  { value: "user",        label: "User",         icon: User,            description: "Standard access — same as Patient", color: "bg-muted text-muted-foreground border-border" },
 ];
+
+function RoleBadge({ role }: { role: string }) {
+  const r = ROLES.find((x) => x.value === role);
+  const cls = r?.color ?? "bg-muted text-muted-foreground border-border";
+  return (
+    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${cls}`}>
+      {r && <r.icon className="h-3 w-3" />}
+      {r?.label ?? role}
+    </span>
+  );
+}
 
 interface UserInfo {
   id: string;
@@ -54,7 +69,7 @@ const AdminUsers = () => {
   const queryClient = useQueryClient();
 
   const [createDialog, setCreateDialog] = useState(false);
-  const [createForm, setCreateForm] = useState({ email: "", password: "", role: "user" });
+  const [createForm, setCreateForm] = useState({ email: "", password: "", role: "patient" });
 
   const [roleDialog, setRoleDialog] = useState<UserInfo | null>(null);
   const [selectedRole, setSelectedRole] = useState("");
@@ -79,7 +94,7 @@ const AdminUsers = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       toast({ title: "User created successfully" });
       setCreateDialog(false);
-      setCreateForm({ email: "", password: "", role: "user" });
+      setCreateForm({ email: "", password: "", role: "patient" });
     },
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -147,11 +162,16 @@ const AdminUsers = () => {
       </div>
 
       {/* RBAC Legend */}
-      <div className="grid sm:grid-cols-2 gap-3 mb-6">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
         {ROLES.map((r) => (
-          <div key={r.value} className="flex items-center gap-3 p-4 bg-card border border-border rounded-xl">
-            <Badge variant={r.value === "admin" ? "default" : "secondary"}>{r.label}</Badge>
-            <p className="text-sm text-muted-foreground">{r.description}</p>
+          <div key={r.value} className="flex items-start gap-3 p-4 bg-card border border-border rounded-xl">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${r.color} border`}>
+              <r.icon className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">{r.label}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{r.description}</p>
+            </div>
           </div>
         ))}
       </div>
@@ -177,7 +197,7 @@ const AdminUsers = () => {
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.email}</TableCell>
                   <TableCell>
-                    <Badge variant={user.role === "admin" ? "default" : "secondary"}>{user.role}</Badge>
+                    <RoleBadge role={user.role} />
                   </TableCell>
                   <TableCell>
                     <Badge
@@ -266,8 +286,11 @@ const AdminUsers = () => {
                 <SelectContent>
                   {ROLES.map((r) => (
                     <SelectItem key={r.value} value={r.value}>
-                      <span className="font-medium">{r.label}</span>
-                      <span className="text-xs text-muted-foreground ml-2">— {r.description}</span>
+                      <div className="flex items-center gap-2">
+                        <r.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="font-medium">{r.label}</span>
+                        <span className="text-xs text-muted-foreground">— {r.description}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
