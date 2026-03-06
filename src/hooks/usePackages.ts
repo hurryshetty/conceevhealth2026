@@ -26,6 +26,8 @@ export interface PackageData {
   recovery: string | null;
   includes: string[];
   overview: string | null;
+  available_hospitals: string[];
+  features: string[];
   reviews?: PackageReview[];
   specialty_name?: string;
 }

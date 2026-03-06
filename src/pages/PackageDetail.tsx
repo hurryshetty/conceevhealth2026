@@ -46,7 +46,11 @@ const PackageDetail = () => {
   }
 
   const Icon = getIconByName(pkg.icon_name);
-  const availableHospitals = locations.filter((h) => pkg.cities.includes(h.city_name || ""));
+  // Use stored available_hospitals list; fall back to city-matched locations for legacy packages
+  const storedHospitals = (pkg.available_hospitals || []);
+  const availableHospitals = storedHospitals.length > 0
+    ? locations.filter((h) => storedHospitals.includes(h.name))
+    : locations.filter((h) => pkg.cities.includes(h.city_name || ""));
   const relatedPackages = allPackages
     .filter((p) => p.specialty_id === pkg.specialty_id && p.slug !== pkg.slug)
     .slice(0, 3);
@@ -198,12 +202,15 @@ const PackageDetail = () => {
                     WhatsApp Us <ArrowRight className="h-4 w-4" />
                   </a>
                 </Button>
-                <div className="mt-6 pt-6 border-t border-border space-y-3 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> EMI options available</div>
-                  <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> Free second opinion</div>
-                  <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> Dedicated care coordinator</div>
-                  <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> Insurance assistance</div>
-                </div>
+                {(pkg.features || []).length > 0 && (
+                  <div className="mt-6 pt-6 border-t border-border space-y-3 text-sm text-muted-foreground">
+                    {(pkg.features || []).map((feat) => (
+                      <div key={feat} className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-primary shrink-0" /> {feat}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
