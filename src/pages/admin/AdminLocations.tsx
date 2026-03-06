@@ -54,7 +54,7 @@ const AdminLocations = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-locations"] });
       queryClient.invalidateQueries({ queryKey: ["locations"] });
       setDialogOpen(false);
-      toast({ title: editId ? "Location updated" : "Location created" });
+      toast({ title: editId ? "Hospital updated" : "Hospital created" });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -67,7 +67,7 @@ const AdminLocations = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-locations"] });
       queryClient.invalidateQueries({ queryKey: ["locations"] });
-      toast({ title: "Location deleted" });
+      toast({ title: "Hospital deleted" });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -84,13 +84,13 @@ const AdminLocations = () => {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="font-serif text-3xl font-bold text-foreground">Locations</h1>
-        <Button onClick={openCreate} className="gap-2"><Plus className="h-4 w-4" /> Add Location</Button>
+        <h1 className="font-serif text-3xl font-bold text-foreground">Hospitals</h1>
+        <Button onClick={openCreate} className="gap-2"><Plus className="h-4 w-4" /> Add Hospital</Button>
       </div>
 
       <div className="relative mb-4 max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Search locations..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+        <Input placeholder="Search hospitals..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
       </div>
 
       <div className="bg-card rounded-xl border border-border overflow-hidden">
@@ -129,7 +129,7 @@ const AdminLocations = () => {
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>{editId ? "Edit Location" : "Add Location"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editId ? "Edit Hospital" : "Add Hospital"}</DialogTitle></DialogHeader>
           <form onSubmit={(e) => { e.preventDefault(); saveMutation.mutate(form); }} className="space-y-4">
             <div className="space-y-2"><Label>Hospital Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></div>
             <div className="space-y-2"><Label>Area</Label><Input value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} required /></div>

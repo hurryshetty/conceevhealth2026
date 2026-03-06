@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, Package, UserRound, MapPin, Layers, MessageSquare, LogOut, Users, X, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Package, UserRound, Building2, Layers, MessageSquare, LogOut, Users, X, ShieldCheck } from "lucide-react";
 import { useAdmin } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
 
@@ -7,7 +7,7 @@ const links = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard", end: true },
   { to: "/admin/packages", icon: Package, label: "Packages" },
   { to: "/admin/doctors", icon: UserRound, label: "Doctors" },
-  { to: "/admin/locations", icon: MapPin, label: "Locations" },
+  { to: "/admin/hospitals", icon: Building2, label: "Hospitals" },
   { to: "/admin/specialties", icon: Layers, label: "Specialties" },
   { to: "/admin/verification", icon: ShieldCheck, label: "Verification" },
   { to: "/admin/leads", icon: MessageSquare, label: "Leads" },
