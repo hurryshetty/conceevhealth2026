@@ -23,6 +23,7 @@ import AdminLayout from "./components/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminPackages from "./pages/admin/AdminPackages";
 import AdminPackageForm from "./pages/admin/AdminPackageForm";
+import AdminDoctorForm from "./pages/admin/AdminDoctorForm";
 import AdminDoctors from "./pages/admin/AdminDoctors";
 import AdminLocations from "./pages/admin/AdminLocations";
 import AdminSpecialties from "./pages/admin/AdminSpecialties";
@@ -90,6 +91,8 @@ const App = () => (
             <Route path="packages/new" element={<AdminPackageForm />} />
             <Route path="packages/:id/edit" element={<AdminPackageForm />} />
             <Route path="doctors" element={<AdminDoctors />} />
+            <Route path="doctors/new" element={<AdminDoctorForm />} />
+            <Route path="doctors/:id/edit" element={<AdminDoctorForm />} />
             <Route path="locations" element={<AdminLocations />} />
             <Route path="specialties" element={<AdminSpecialties />} />
             <Route path="leads" element={<AdminLeads />} />
