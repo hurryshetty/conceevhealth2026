@@ -15,6 +15,7 @@ import DoctorProfile from "./pages/DoctorProfile";
 import Doctors from "./pages/Doctors";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 
 // Admin
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -83,6 +84,7 @@ const App = () => (
           <Route path="/doctors" element={<Doctors />} />
           <Route path="/doctors/:slug" element={<DoctorProfile />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
           {/* Admin */}
           <Route path="/admin/login" element={<AdminLogin />} />

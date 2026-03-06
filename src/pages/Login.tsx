@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ROLE_HOME, AppRole } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heart } from "lucide-react";
 
 const Login = () => {
@@ -14,7 +13,6 @@ const Login = () => {
   const { toast } = useToast();
 
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
-  const [signupForm, setSignupForm] = useState({ name: "", email: "", password: "", confirm: "" });
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -41,129 +39,56 @@ const Login = () => {
     setLoading(false);
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (signupForm.password !== signupForm.confirm) {
-      toast({ title: "Passwords don't match", variant: "destructive" });
-      return;
-    }
-    setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
-      email: signupForm.email,
-      password: signupForm.password,
-      options: {
-        data: { full_name: signupForm.name },
-        emailRedirectTo: `${window.location.origin}/login`,
-      },
-    });
-    if (error) {
-      toast({ title: "Signup failed", description: error.message, variant: "destructive" });
-      setLoading(false);
-      return;
-    }
-    if (data.user) {
-      await supabase.from("user_roles").insert({ user_id: data.user.id, role: "patient" });
-      toast({ title: "Account created!", description: "Please check your email to verify." });
-      navigate("/patient");
-    }
-    setLoading(false);
-  };
-
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-3">
+          <Link to="/" className="inline-flex items-center justify-center gap-2 mb-3">
             <Heart className="h-8 w-8 text-primary fill-primary" />
             <span className="font-serif text-3xl font-bold text-foreground">Conceev Health</span>
-          </div>
-          <p className="text-muted-foreground">Your healthcare journey starts here</p>
+          </Link>
+          <p className="text-muted-foreground">Sign in to your account</p>
         </div>
 
         <div className="bg-card border border-border rounded-2xl p-8 shadow-sm">
-          <Tabs defaultValue="login">
-            <TabsList className="grid grid-cols-2 w-full mb-6">
-              <TabsTrigger value="login">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Register</TabsTrigger>
-            </TabsList>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input
+                type="email" required
+                placeholder="you@example.com"
+                value={loginForm.email}
+                onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Password</Label>
+              <Input
+                type="password" required
+                placeholder="••••••••"
+                value={loginForm.password}
+                onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+              />
+            </div>
+            <Button type="submit" className="w-full" size="lg" disabled={loading}>
+              {loading ? "Signing in..." : "Sign In"}
+            </Button>
+          </form>
 
-            <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input
-                    type="email" required
-                    placeholder="you@example.com"
-                    value={loginForm.email}
-                    onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Password</Label>
-                  <Input
-                    type="password" required
-                    placeholder="••••••••"
-                    value={loginForm.password}
-                    onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Signing in..." : "Sign In"}
-                </Button>
-              </form>
-            </TabsContent>
-
-            <TabsContent value="signup">
-              <form onSubmit={handleSignup} className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Full Name</Label>
-                  <Input
-                    required
-                    placeholder="Your full name"
-                    value={signupForm.name}
-                    onChange={(e) => setSignupForm({ ...signupForm, name: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input
-                    type="email" required
-                    placeholder="you@example.com"
-                    value={signupForm.email}
-                    onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Password</Label>
-                  <Input
-                    type="password" required minLength={6}
-                    placeholder="Min 6 characters"
-                    value={signupForm.password}
-                    onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Confirm Password</Label>
-                  <Input
-                    type="password" required
-                    placeholder="Repeat password"
-                    value={signupForm.confirm}
-                    onChange={(e) => setSignupForm({ ...signupForm, confirm: e.target.value })}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Creating account..." : "Create Account"}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-
-          <p className="text-center text-xs text-muted-foreground mt-6">
-            Staff?{" "}
-            <a href="/admin/login" className="text-primary hover:underline">
-              Admin login
-            </a>
-          </p>
+          <div className="mt-6 pt-6 border-t border-border text-center space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Don't have an account?{" "}
+              <Link to="/register" className="text-primary hover:underline font-medium">
+                Create account
+              </Link>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Staff?{" "}
+              <Link to="/admin/login" className="text-primary hover:underline">
+                Admin login
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>
