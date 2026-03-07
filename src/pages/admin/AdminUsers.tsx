@@ -43,7 +43,16 @@ interface UserInfo {
 
 const callManageUsers = async (body: Record<string, any>) => {
   const { data, error } = await supabase.functions.invoke("manage-users", { body });
-  if (error) throw new Error(error.message || "Request failed");
+  if (error) {
+    // Extract the actual error message from the Edge Function response body
+    try {
+      const errBody = await (error as any).context?.json?.();
+      const msg = errBody?.error || errBody?.message || error.message;
+      throw new Error(msg);
+    } catch (inner: any) {
+      throw new Error(inner.message || error.message || "Request failed");
+    }
+  }
   if (data?.error) throw new Error(data.error);
   return data;
 };
