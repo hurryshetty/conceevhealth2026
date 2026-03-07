@@ -12,12 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Shield, ShieldOff, KeyRound, Users, Plus, Trash2, UserCog, LayoutDashboard, Stethoscope, Building2, ClipboardList, User } from "lucide-react";
 
-const SUPABASE_URL = "https://dlwiktowlhbrlcjeojcc.supabase.co";
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
-
-const getUrl = () => import.meta.env.VITE_SUPABASE_URL || SUPABASE_URL;
-const getKey = () => SUPABASE_KEY;
-
 const ROLES = [
   { value: "admin",       label: "Admin",       icon: LayoutDashboard, description: "Full access to all admin features, users, and settings", color: "bg-red-100 text-red-800 border-red-200" },
   { value: "coordinator", label: "Coordinator",  icon: ClipboardList,   description: "Manage cases, patient follow-ups, and communications", color: "bg-purple-100 text-purple-800 border-purple-200" },
@@ -48,19 +42,9 @@ interface UserInfo {
 }
 
 const callManageUsers = async (body: Record<string, any>) => {
-  const session = await supabase.auth.getSession();
-  const token = session.data.session?.access_token;
-  const res = await fetch(`${getUrl()}/functions/v1/manage-users`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "apikey": getKey(),
-      "Authorization": `Bearer ${token}`,
-    },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Request failed");
+  const { data, error } = await supabase.functions.invoke("manage-users", { body });
+  if (error) throw new Error(error.message || "Request failed");
+  if (data?.error) throw new Error(data.error);
   return data;
 };
 
