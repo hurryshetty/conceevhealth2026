@@ -31,6 +31,7 @@ import AdminSpecialties from "./pages/admin/AdminSpecialties";
 import AdminLeads from "./pages/admin/AdminLeads";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminVerification from "./pages/admin/AdminVerification";
+import AdminSettings from "./pages/admin/AdminSettings";
 
 // Auth guard
 import RoleRoute from "./components/auth/RoleRoute";
@@ -101,6 +102,7 @@ const App = () => (
             <Route path="leads" element={<AdminLeads />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="verification" element={<AdminVerification />} />
+            <Route path="settings" element={<AdminSettings />} />
           </Route>
 
           {/* Coordinator */}
