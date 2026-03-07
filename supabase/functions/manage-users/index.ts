@@ -13,9 +13,11 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verify caller is authenticated
+    // Use service role client for all operations (including auth verification)
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
+    // Verify caller is authenticated using the service role client
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -23,18 +25,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    const callerClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user: caller } } = await callerClient.auth.getUser();
-    if (!caller) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    const { data: { user: caller }, error: authErr } = await adminClient.auth.getUser(token);
+    if (authErr || !caller) {
+      return new Response(JSON.stringify({ error: authErr?.message || "Unauthorized" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     // Verify caller has admin role
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
     const { data: roleData } = await adminClient
       .from("user_roles")
       .select("role")
