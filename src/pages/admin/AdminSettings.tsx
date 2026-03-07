@@ -10,17 +10,48 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Globe, Map, Building, MapPin, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, Globe, Map, Building, MapPin, ChevronRight, Search } from "lucide-react";
 import { useCountries, useStates, useCities, useAreas } from "@/hooks/useLocations";
 import type { Country, State, City, Area } from "@/hooks/useLocations";
 
-// ─── Breadcrumb trail ──────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const toSlug = (s: string) =>
+  s.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+
+/** Translate Postgres constraint errors into readable messages */
+function friendlyError(e: any): string {
+  const msg: string = e?.message || "";
+  if (msg.includes("duplicate key") || msg.includes("unique constraint")) {
+    return "This name already exists. Please use a different name.";
+  }
+  if (msg.includes("foreign key")) {
+    return "Cannot delete — it has associated records. Remove children first.";
+  }
+  return msg || "An unexpected error occurred.";
+}
+
+/** Simple per-field validation, returns map of field → error string */
+function validateFields(fields: Record<string, { value: string; required?: boolean; minLen?: number; pattern?: RegExp; patternMsg?: string }>) {
+  const errors: Record<string, string> = {};
+  for (const [key, rule] of Object.entries(fields)) {
+    if (rule.required && !rule.value.trim()) {
+      errors[key] = "This field is required.";
+    } else if (rule.minLen && rule.value.trim().length < rule.minLen) {
+      errors[key] = `Must be at least ${rule.minLen} characters.`;
+    } else if (rule.pattern && rule.value.trim() && !rule.pattern.test(rule.value.trim())) {
+      errors[key] = rule.patternMsg || "Invalid format.";
+    }
+  }
+  return errors;
+}
+
+// ─── Breadcrumb ───────────────────────────────────────────────────────────────
 function Breadcrumb({ items }: { items: { label: string; sub?: string }[] }) {
   return (
     <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-4 flex-wrap">
       {items.map((item, i) => (
         <span key={i} className="flex items-center gap-1.5">
-          {i > 0 && <ChevronRight className="h-3.5 w-3.5" />}
+          {i > 0 && <ChevronRight className="h-3.5 w-3.5 flex-shrink-0" />}
           <span className={i === items.length - 1 ? "text-foreground font-medium" : ""}>
             {item.label}
             {item.sub && <span className="text-xs text-muted-foreground ml-1">({item.sub})</span>}
@@ -31,9 +62,15 @@ function Breadcrumb({ items }: { items: { label: string; sub?: string }[] }) {
   );
 }
 
+// ─── Field with error ─────────────────────────────────────────────────────────
+function FieldError({ error }: { error?: string }) {
+  if (!error) return null;
+  return <p className="text-xs text-destructive mt-1">{error}</p>;
+}
+
 // ─── Generic CRUD dialog ───────────────────────────────────────────────────────
 function CrudDialog({
-  open, onOpenChange, title, fields, onSave, saving,
+  open, onOpenChange, title, fields, onSave, saving, saveDisabled,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -41,15 +78,18 @@ function CrudDialog({
   fields: React.ReactNode;
   onSave: () => void;
   saving: boolean;
+  saveDisabled?: boolean;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
-        <div className="space-y-4">{fields}</div>
+        <div className="space-y-4 py-1">{fields}</div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={onSave} disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
+          <Button onClick={onSave} disabled={saving || saveDisabled}>
+            {saving ? "Saving..." : "Save"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -57,9 +97,7 @@ function CrudDialog({
 }
 
 // ─── Delete confirm ────────────────────────────────────────────────────────────
-function DeleteConfirm({
-  open, onOpenChange, label, onConfirm,
-}: {
+function DeleteConfirm({ open, onOpenChange, label, onConfirm }: {
   open: boolean; onOpenChange: (v: boolean) => void; label: string; onConfirm: () => void;
 }) {
   return (
@@ -67,11 +105,18 @@ function DeleteConfirm({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete "{label}"?</AlertDialogTitle>
-          <AlertDialogDescription>This will also delete all child records (states → cities → areas).</AlertDialogDescription>
+          <AlertDialogDescription>
+            This will permanently delete it along with all child records.
+          </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          <AlertDialogAction
+            onClick={onConfirm}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            Delete
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -83,12 +128,28 @@ function CountriesSection() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const { data: countries = [] } = useCountries();
-  const [dialog, setDialog] = useState<{ open: boolean; id?: string; name: string; code: string }>({ open: false, name: "", code: "" });
+  const [search, setSearch] = useState("");
+  const [dialog, setDialog] = useState<{ open: boolean; id?: string; name: string; code: string }>({
+    open: false, name: "", code: "",
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<Country | null>(null);
+
+  const openAdd = () => { setDialog({ open: true, name: "", code: "" }); setErrors({}); };
+  const openEdit = (c: Country) => { setDialog({ open: true, id: c.id, name: c.name, code: c.code || "" }); setErrors({}); };
+
+  const validate = () => {
+    const errs = validateFields({
+      name: { value: dialog.name, required: true, minLen: 2 },
+      code: { value: dialog.code, pattern: /^[A-Z]{0,3}$/, patternMsg: "Use 2-3 uppercase letters (e.g. IN, US)." },
+    });
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const payload = { name: dialog.name.trim(), code: dialog.code.trim() || null };
+      const payload = { name: dialog.name.trim(), code: dialog.code.trim().toUpperCase() || null };
       if (dialog.id) {
         const { error } = await supabase.from("countries").update(payload).eq("id", dialog.id);
         if (error) throw error;
@@ -102,7 +163,7 @@ function CountriesSection() {
       setDialog({ open: false, name: "", code: "" });
       toast({ title: dialog.id ? "Country updated" : "Country added" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Error", description: friendlyError(e), variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
@@ -112,19 +173,26 @@ function CountriesSection() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["countries"] });
-      qc.invalidateQueries({ queryKey: ["states"] });
-      qc.invalidateQueries({ queryKey: ["cities"] });
       setDeleteTarget(null);
       toast({ title: "Country deleted" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Error", description: friendlyError(e), variant: "destructive" }),
   });
+
+  const filtered = countries.filter((c) =>
+    c.name.toLowerCase().includes(search.toLowerCase()) ||
+    (c.code || "").toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{countries.length} countries</p>
-        <Button size="sm" onClick={() => setDialog({ open: true, name: "", code: "" })} className="gap-1.5">
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search countries..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 h-8 text-sm" />
+        </div>
+        <p className="text-sm text-muted-foreground ml-auto">{filtered.length} / {countries.length}</p>
+        <Button size="sm" onClick={openAdd} className="gap-1.5">
           <Plus className="h-3.5 w-3.5" /> Add Country
         </Button>
       </div>
@@ -139,24 +207,28 @@ function CountriesSection() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {countries.map((c) => (
+            {filtered.map((c) => (
               <TableRow key={c.id}>
                 <TableCell className="font-medium">{c.name}</TableCell>
-                <TableCell><span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{c.code || "—"}</span></TableCell>
+                <TableCell>
+                  {c.code
+                    ? <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{c.code}</span>
+                    : <span className="text-muted-foreground">—</span>}
+                </TableCell>
                 <TableCell>
                   <div className="flex gap-1">
-                    <Button size="icon" variant="ghost" onClick={() => setDialog({ open: true, id: c.id, name: c.name, code: c.code || "" })}>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(c)}>
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
-                    <Button size="icon" variant="ghost" className="text-destructive" onClick={() => setDeleteTarget(c)}>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(c)}>
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </TableCell>
               </TableRow>
             ))}
-            {countries.length === 0 && (
-              <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-6">No countries yet</TableCell></TableRow>
+            {filtered.length === 0 && (
+              <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-8">No countries found</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
@@ -164,19 +236,32 @@ function CountriesSection() {
 
       <CrudDialog
         open={dialog.open}
-        onOpenChange={(v) => setDialog((d) => ({ ...d, open: v }))}
+        onOpenChange={(v) => { setDialog((d) => ({ ...d, open: v })); setErrors({}); }}
         title={dialog.id ? "Edit Country" : "Add Country"}
         saving={saveMutation.isPending}
-        onSave={() => saveMutation.mutate()}
+        onSave={() => { if (validate()) saveMutation.mutate(); }}
         fields={
           <>
-            <div className="space-y-2">
-              <Label>Country Name</Label>
-              <Input value={dialog.name} onChange={(e) => setDialog((d) => ({ ...d, name: e.target.value }))} placeholder="India" />
+            <div className="space-y-1">
+              <Label>Country Name <span className="text-destructive">*</span></Label>
+              <Input
+                value={dialog.name}
+                onChange={(e) => { setDialog((d) => ({ ...d, name: e.target.value })); setErrors((er) => ({ ...er, name: "" })); }}
+                placeholder="India"
+                className={errors.name ? "border-destructive" : ""}
+              />
+              <FieldError error={errors.name} />
             </div>
-            <div className="space-y-2">
-              <Label>Country Code <span className="text-muted-foreground text-xs">(optional, e.g. IN)</span></Label>
-              <Input value={dialog.code} onChange={(e) => setDialog((d) => ({ ...d, code: e.target.value }))} placeholder="IN" maxLength={3} />
+            <div className="space-y-1">
+              <Label>Country Code <span className="text-muted-foreground text-xs">(optional, ISO 2–3 letters)</span></Label>
+              <Input
+                value={dialog.code}
+                onChange={(e) => { setDialog((d) => ({ ...d, code: e.target.value.toUpperCase() })); setErrors((er) => ({ ...er, code: "" })); }}
+                placeholder="IN"
+                maxLength={3}
+                className={errors.code ? "border-destructive" : ""}
+              />
+              <FieldError error={errors.code} />
             </div>
           </>
         }
@@ -199,14 +284,25 @@ function StatesSection() {
   const { toast } = useToast();
   const { data: countries = [] } = useCountries();
   const [countryId, setCountryId] = useState<string>("");
+  const [search, setSearch] = useState("");
   const { data: states = [] } = useStates(countryId || undefined);
   const selectedCountry = countries.find((c) => c.id === countryId);
   const [dialog, setDialog] = useState<{ open: boolean; id?: string; name: string }>({ open: false, name: "" });
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<State | null>(null);
+
+  const openAdd = () => { setDialog({ open: true, name: "" }); setErrors({}); };
+  const openEdit = (s: State) => { setDialog({ open: true, id: s.id, name: s.name }); setErrors({}); };
+
+  const validate = () => {
+    const errs = validateFields({ name: { value: dialog.name, required: true, minLen: 2 } });
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!countryId) throw new Error("Select a country first");
+      if (!countryId) throw new Error("Select a country first.");
       const payload = { name: dialog.name.trim(), country_id: countryId };
       if (dialog.id) {
         const { error } = await supabase.from("states").update({ name: payload.name }).eq("id", dialog.id);
@@ -221,7 +317,7 @@ function StatesSection() {
       setDialog({ open: false, name: "" });
       toast({ title: dialog.id ? "State updated" : "State added" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Error", description: friendlyError(e), variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
@@ -235,29 +331,35 @@ function StatesSection() {
       setDeleteTarget(null);
       toast({ title: "State deleted" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Error", description: friendlyError(e), variant: "destructive" }),
   });
+
+  const filtered = states.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label>Filter by Country</Label>
-        <Select value={countryId} onValueChange={setCountryId}>
+        <Label>Select Country <span className="text-destructive">*</span></Label>
+        <Select value={countryId} onValueChange={(v) => { setCountryId(v); setSearch(""); }}>
           <SelectTrigger className="max-w-xs">
-            <SelectValue placeholder="Select a country" />
+            <SelectValue placeholder="Choose a country to manage its states" />
           </SelectTrigger>
           <SelectContent>
-            {countries.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            {countries.map((c) => <SelectItem key={c.id} value={c.id}>{c.name} {c.code ? `(${c.code})` : ""}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
 
       {countryId && (
         <>
-          <Breadcrumb items={[{ label: selectedCountry?.name || "" }]} />
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">{states.length} states in {selectedCountry?.name}</p>
-            <Button size="sm" onClick={() => setDialog({ open: true, name: "" })} className="gap-1.5">
+          <Breadcrumb items={[{ label: selectedCountry?.name || "", sub: `${filtered.length} states` }]} />
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1 max-w-xs">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search states..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 h-8 text-sm" />
+            </div>
+            <p className="text-sm text-muted-foreground ml-auto">{filtered.length} / {states.length}</p>
+            <Button size="sm" onClick={openAdd} className="gap-1.5">
               <Plus className="h-3.5 w-3.5" /> Add State
             </Button>
           </div>
@@ -266,28 +368,28 @@ function StatesSection() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>State Name</TableHead>
+                  <TableHead>State / Region Name</TableHead>
                   <TableHead className="w-[80px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {states.map((s) => (
+                {filtered.map((s) => (
                   <TableRow key={s.id}>
                     <TableCell className="font-medium">{s.name}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        <Button size="icon" variant="ghost" onClick={() => setDialog({ open: true, id: s.id, name: s.name })}>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(s)}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                        <Button size="icon" variant="ghost" className="text-destructive" onClick={() => setDeleteTarget(s)}>
+                        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(s)}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </TableCell>
                   </TableRow>
                 ))}
-                {states.length === 0 && (
-                  <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground py-6">No states yet</TableCell></TableRow>
+                {filtered.length === 0 && (
+                  <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground py-8">No states found</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
@@ -297,14 +399,20 @@ function StatesSection() {
 
       <CrudDialog
         open={dialog.open}
-        onOpenChange={(v) => setDialog((d) => ({ ...d, open: v }))}
-        title={dialog.id ? "Edit State" : "Add State"}
+        onOpenChange={(v) => { setDialog((d) => ({ ...d, open: v })); setErrors({}); }}
+        title={dialog.id ? "Edit State" : `Add State — ${selectedCountry?.name}`}
         saving={saveMutation.isPending}
-        onSave={() => saveMutation.mutate()}
+        onSave={() => { if (validate()) saveMutation.mutate(); }}
         fields={
-          <div className="space-y-2">
-            <Label>State Name</Label>
-            <Input value={dialog.name} onChange={(e) => setDialog((d) => ({ ...d, name: e.target.value }))} placeholder="Karnataka" />
+          <div className="space-y-1">
+            <Label>State / Region Name <span className="text-destructive">*</span></Label>
+            <Input
+              value={dialog.name}
+              onChange={(e) => { setDialog((d) => ({ ...d, name: e.target.value })); setErrors((er) => ({ ...er, name: "" })); }}
+              placeholder="Karnataka"
+              className={errors.name ? "border-destructive" : ""}
+            />
+            <FieldError error={errors.name} />
           </div>
         }
       />
@@ -327,21 +435,41 @@ function CitiesSection() {
   const { data: countries = [] } = useCountries();
   const [countryId, setCountryId] = useState<string>("");
   const [stateId, setStateId] = useState<string>("");
+  const [search, setSearch] = useState("");
   const { data: states = [] } = useStates(countryId || undefined);
   const { data: cities = [] } = useCities(stateId || undefined);
   const selectedCountry = countries.find((c) => c.id === countryId);
   const selectedState = states.find((s) => s.id === stateId);
-  const [dialog, setDialog] = useState<{ open: boolean; id?: string; name: string; slug: string }>({ open: false, name: "", slug: "" });
+
+  const [dialog, setDialog] = useState<{ open: boolean; id?: string; name: string; slug: string }>({
+    open: false, name: "", slug: "",
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<City | null>(null);
 
-  const toSlug = (s: string) => s.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+  const openAdd = () => { setDialog({ open: true, name: "", slug: "" }); setErrors({}); };
+  const openEdit = (c: City) => { setDialog({ open: true, id: c.id, name: c.name, slug: c.slug }); setErrors({}); };
+
+  const validate = () => {
+    const errs = validateFields({
+      name: { value: dialog.name, required: true, minLen: 2 },
+      slug: {
+        value: dialog.slug,
+        required: true,
+        pattern: /^[a-z0-9-]+$/,
+        patternMsg: "Only lowercase letters, numbers and hyphens allowed.",
+      },
+    });
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!stateId) throw new Error("Select a state first");
+      if (!stateId) throw new Error("Select a state first.");
       const payload = {
         name: dialog.name.trim(),
-        slug: dialog.slug.trim() || toSlug(dialog.name),
+        slug: dialog.slug.trim(),
         state_id: stateId,
         country_id: countryId || null,
       };
@@ -358,7 +486,7 @@ function CitiesSection() {
       setDialog({ open: false, name: "", slug: "" });
       toast({ title: dialog.id ? "City updated" : "City added" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Error", description: friendlyError(e), variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
@@ -372,15 +500,20 @@ function CitiesSection() {
       setDeleteTarget(null);
       toast({ title: "City deleted" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Error", description: friendlyError(e), variant: "destructive" }),
   });
+
+  const filtered = cities.filter((c) =>
+    c.name.toLowerCase().includes(search.toLowerCase()) ||
+    c.slug.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label>Country</Label>
-          <Select value={countryId} onValueChange={(v) => { setCountryId(v); setStateId(""); }}>
+          <Label>Country <span className="text-destructive">*</span></Label>
+          <Select value={countryId} onValueChange={(v) => { setCountryId(v); setStateId(""); setSearch(""); }}>
             <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
             <SelectContent>
               {countries.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
@@ -388,9 +521,9 @@ function CitiesSection() {
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>State</Label>
-          <Select value={stateId} onValueChange={setStateId} disabled={!countryId}>
-            <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
+          <Label>State / Region <span className="text-destructive">*</span></Label>
+          <Select value={stateId} onValueChange={(v) => { setStateId(v); setSearch(""); }} disabled={!countryId}>
+            <SelectTrigger><SelectValue placeholder={countryId ? "Select state" : "Select country first"} /></SelectTrigger>
             <SelectContent>
               {states.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
             </SelectContent>
@@ -402,11 +535,15 @@ function CitiesSection() {
         <>
           <Breadcrumb items={[
             { label: selectedCountry?.name || "" },
-            { label: selectedState?.name || "" },
+            { label: selectedState?.name || "", sub: `${filtered.length} cities` },
           ]} />
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">{cities.length} cities in {selectedState?.name}</p>
-            <Button size="sm" onClick={() => setDialog({ open: true, name: "", slug: "" })} className="gap-1.5">
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1 max-w-xs">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search cities..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 h-8 text-sm" />
+            </div>
+            <p className="text-sm text-muted-foreground ml-auto">{filtered.length} / {cities.length}</p>
+            <Button size="sm" onClick={openAdd} className="gap-1.5">
               <Plus className="h-3.5 w-3.5" /> Add City
             </Button>
           </div>
@@ -416,29 +553,29 @@ function CitiesSection() {
               <TableHeader>
                 <TableRow>
                   <TableHead>City Name</TableHead>
-                  <TableHead>Slug</TableHead>
+                  <TableHead>URL Slug</TableHead>
                   <TableHead className="w-[80px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {cities.map((c) => (
+                {filtered.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{c.name}</TableCell>
                     <TableCell><span className="font-mono text-xs text-muted-foreground">{c.slug}</span></TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        <Button size="icon" variant="ghost" onClick={() => setDialog({ open: true, id: c.id, name: c.name, slug: c.slug })}>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(c)}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                        <Button size="icon" variant="ghost" className="text-destructive" onClick={() => setDeleteTarget(c)}>
+                        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(c)}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </TableCell>
                   </TableRow>
                 ))}
-                {cities.length === 0 && (
-                  <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-6">No cities yet</TableCell></TableRow>
+                {filtered.length === 0 && (
+                  <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-8">No cities found</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
@@ -448,23 +585,41 @@ function CitiesSection() {
 
       <CrudDialog
         open={dialog.open}
-        onOpenChange={(v) => setDialog((d) => ({ ...d, open: v }))}
-        title={dialog.id ? "Edit City" : "Add City"}
+        onOpenChange={(v) => { setDialog((d) => ({ ...d, open: v })); setErrors({}); }}
+        title={dialog.id ? "Edit City" : `Add City — ${selectedState?.name}`}
         saving={saveMutation.isPending}
-        onSave={() => saveMutation.mutate()}
+        onSave={() => { if (validate()) saveMutation.mutate(); }}
         fields={
           <>
-            <div className="space-y-2">
-              <Label>City Name</Label>
+            <div className="space-y-1">
+              <Label>City Name <span className="text-destructive">*</span></Label>
               <Input
                 value={dialog.name}
-                onChange={(e) => setDialog((d) => ({ ...d, name: e.target.value, slug: d.id ? d.slug : toSlug(e.target.value) }))}
+                onChange={(e) => {
+                  const name = e.target.value;
+                  setDialog((d) => ({ ...d, name, slug: d.id ? d.slug : toSlug(name) }));
+                  setErrors((er) => ({ ...er, name: "" }));
+                }}
                 placeholder="Bangalore"
+                className={errors.name ? "border-destructive" : ""}
               />
+              <FieldError error={errors.name} />
             </div>
-            <div className="space-y-2">
-              <Label>Slug <span className="text-xs text-muted-foreground">(URL-friendly)</span></Label>
-              <Input value={dialog.slug} onChange={(e) => setDialog((d) => ({ ...d, slug: e.target.value }))} placeholder="bangalore" />
+            <div className="space-y-1">
+              <Label>
+                URL Slug <span className="text-destructive">*</span>
+                <span className="text-muted-foreground text-xs ml-1">(auto-generated, editable)</span>
+              </Label>
+              <Input
+                value={dialog.slug}
+                onChange={(e) => { setDialog((d) => ({ ...d, slug: toSlug(e.target.value) })); setErrors((er) => ({ ...er, slug: "" })); }}
+                placeholder="bangalore"
+                className={`font-mono text-sm ${errors.slug ? "border-destructive" : ""}`}
+              />
+              <FieldError error={errors.slug} />
+              {!errors.slug && dialog.slug && (
+                <p className="text-xs text-muted-foreground">Used in URLs like /cities/{dialog.slug}</p>
+              )}
             </div>
           </>
         }
@@ -487,16 +642,29 @@ function AreasSection() {
   const { toast } = useToast();
   const { data: cities = [] } = useCities();
   const [cityId, setCityId] = useState<string>("");
+  const [search, setSearch] = useState("");
   const { data: areas = [] } = useAreas(cityId || undefined);
   const selectedCity = cities.find((c) => c.id === cityId);
+
   const [dialog, setDialog] = useState<{ open: boolean; id?: string; name: string }>({ open: false, name: "" });
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<Area | null>(null);
-  const [bulkText, setBulkText] = useState("");
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkText, setBulkText] = useState("");
+  const [bulkError, setBulkError] = useState("");
+
+  const openAdd = () => { setDialog({ open: true, name: "" }); setErrors({}); };
+  const openEdit = (a: Area) => { setDialog({ open: true, id: a.id, name: a.name }); setErrors({}); };
+
+  const validate = () => {
+    const errs = validateFields({ name: { value: dialog.name, required: true, minLen: 2 } });
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!cityId) throw new Error("Select a city first");
+      if (!cityId) throw new Error("Select a city first.");
       const payload = { name: dialog.name.trim(), city_id: cityId };
       if (dialog.id) {
         const { error } = await supabase.from("areas").update({ name: payload.name }).eq("id", dialog.id);
@@ -511,7 +679,7 @@ function AreasSection() {
       setDialog({ open: false, name: "" });
       toast({ title: dialog.id ? "Area updated" : "Area added" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Error", description: friendlyError(e), variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
@@ -524,33 +692,55 @@ function AreasSection() {
       setDeleteTarget(null);
       toast({ title: "Area deleted" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Error", description: friendlyError(e), variant: "destructive" }),
   });
 
   const bulkMutation = useMutation({
     mutationFn: async () => {
-      if (!cityId) throw new Error("Select a city first");
-      const names = bulkText.split("\n").map((s) => s.trim()).filter(Boolean);
+      if (!cityId) throw new Error("Select a city first.");
+      const names = bulkText
+        .split("\n")
+        .map((s) => s.trim())
+        .filter((s) => s.length >= 2);
+      if (names.length === 0) throw new Error("No valid area names found (min 2 characters each).");
       const rows = names.map((name) => ({ name, city_id: cityId }));
-      const { error } = await supabase.from("areas").upsert(rows, { onConflict: "city_id,name", ignoreDuplicates: true });
+      const { error } = await supabase
+        .from("areas")
+        .upsert(rows, { onConflict: "city_id,name", ignoreDuplicates: true });
       if (error) throw error;
+      return names.length;
     },
-    onSuccess: () => {
+    onSuccess: (count) => {
       qc.invalidateQueries({ queryKey: ["areas", cityId] });
       setBulkText("");
       setBulkOpen(false);
-      toast({ title: "Areas imported" });
+      setBulkError("");
+      toast({ title: `${count} areas imported successfully` });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: any) => setBulkError(friendlyError(e)),
   });
+
+  const validateBulk = () => {
+    const lines = bulkText.split("\n").map((s) => s.trim()).filter(Boolean);
+    if (lines.length === 0) { setBulkError("Paste at least one area name."); return false; }
+    const short = lines.filter((l) => l.length < 2);
+    if (short.length > 0) {
+      setBulkError(`These entries are too short (min 2 chars): ${short.slice(0, 5).join(", ")}`);
+      return false;
+    }
+    setBulkError("");
+    return true;
+  };
+
+  const filtered = areas.filter((a) => a.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label>Filter by City</Label>
-        <Select value={cityId} onValueChange={setCityId}>
+        <Label>Select City <span className="text-destructive">*</span></Label>
+        <Select value={cityId} onValueChange={(v) => { setCityId(v); setSearch(""); }}>
           <SelectTrigger className="max-w-xs">
-            <SelectValue placeholder="Select a city" />
+            <SelectValue placeholder="Choose a city to manage its areas" />
           </SelectTrigger>
           <SelectContent>
             {cities.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
@@ -560,14 +750,20 @@ function AreasSection() {
 
       {cityId && (
         <>
-          <Breadcrumb items={[{ label: selectedCity?.name || "", sub: `${areas.length} areas` }]} />
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm text-muted-foreground">{areas.length} areas in {selectedCity?.name}</p>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => setBulkOpen(true)} className="gap-1.5">
+          <Breadcrumb items={[
+            { label: selectedCity?.name || "", sub: `${areas.length} areas total` },
+          ]} />
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative flex-1 min-w-[160px] max-w-xs">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search areas..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 h-8 text-sm" />
+            </div>
+            <p className="text-sm text-muted-foreground">{filtered.length} / {areas.length}</p>
+            <div className="flex gap-2 ml-auto">
+              <Button size="sm" variant="outline" onClick={() => { setBulkOpen(true); setBulkText(""); setBulkError(""); }} className="gap-1.5">
                 <Plus className="h-3.5 w-3.5" /> Bulk Import
               </Button>
-              <Button size="sm" onClick={() => setDialog({ open: true, name: "" })} className="gap-1.5">
+              <Button size="sm" onClick={openAdd} className="gap-1.5">
                 <Plus className="h-3.5 w-3.5" /> Add Area
               </Button>
             </div>
@@ -582,23 +778,27 @@ function AreasSection() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {areas.map((a) => (
+                {filtered.map((a) => (
                   <TableRow key={a.id}>
                     <TableCell className="font-medium">{a.name}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        <Button size="icon" variant="ghost" onClick={() => setDialog({ open: true, id: a.id, name: a.name })}>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(a)}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                        <Button size="icon" variant="ghost" className="text-destructive" onClick={() => setDeleteTarget(a)}>
+                        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(a)}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </TableCell>
                   </TableRow>
                 ))}
-                {areas.length === 0 && (
-                  <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground py-6">No areas yet — add one or use Bulk Import</TableCell></TableRow>
+                {filtered.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-center text-muted-foreground py-8">
+                      {areas.length === 0 ? "No areas yet — use Bulk Import to add many at once" : "No areas match your search"}
+                    </TableCell>
+                  </TableRow>
                 )}
               </TableBody>
             </Table>
@@ -606,37 +806,59 @@ function AreasSection() {
         </>
       )}
 
-      {/* Add/Edit area */}
+      {/* Add / Edit area */}
       <CrudDialog
         open={dialog.open}
-        onOpenChange={(v) => setDialog((d) => ({ ...d, open: v }))}
-        title={dialog.id ? "Edit Area" : "Add Area"}
+        onOpenChange={(v) => { setDialog((d) => ({ ...d, open: v })); setErrors({}); }}
+        title={dialog.id ? "Edit Area" : `Add Area — ${selectedCity?.name}`}
         saving={saveMutation.isPending}
-        onSave={() => saveMutation.mutate()}
+        onSave={() => { if (validate()) saveMutation.mutate(); }}
         fields={
-          <div className="space-y-2">
-            <Label>Area Name</Label>
-            <Input value={dialog.name} onChange={(e) => setDialog((d) => ({ ...d, name: e.target.value }))} placeholder="Koramangala" />
+          <div className="space-y-1">
+            <Label>Area Name <span className="text-destructive">*</span></Label>
+            <Input
+              value={dialog.name}
+              onChange={(e) => { setDialog((d) => ({ ...d, name: e.target.value })); setErrors((er) => ({ ...er, name: "" })); }}
+              placeholder="Koramangala"
+              className={errors.name ? "border-destructive" : ""}
+            />
+            <FieldError error={errors.name} />
           </div>
         }
       />
 
-      {/* Bulk import dialog */}
-      <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Bulk Import Areas — {selectedCity?.name}</DialogTitle></DialogHeader>
+      {/* Bulk import */}
+      <Dialog open={bulkOpen} onOpenChange={(v) => { setBulkOpen(v); setBulkError(""); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Bulk Import Areas</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              City: <span className="font-medium text-foreground">{selectedCity?.name}</span>
+            </p>
+          </DialogHeader>
           <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">Enter one area name per line. Duplicates will be skipped.</p>
+            <p className="text-sm text-muted-foreground">
+              Enter one area name per line. Each must be at least 2 characters. Duplicates are automatically skipped.
+            </p>
             <textarea
-              className="w-full h-40 border border-border rounded-md p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring bg-background"
+              className={`w-full h-44 border rounded-md p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring bg-background ${bulkError ? "border-destructive" : "border-border"}`}
               placeholder={"Koramangala\nIndiranagar\nWhitefield\nElectronic City"}
               value={bulkText}
-              onChange={(e) => setBulkText(e.target.value)}
+              onChange={(e) => { setBulkText(e.target.value); setBulkError(""); }}
             />
+            {bulkError && <p className="text-xs text-destructive">{bulkError}</p>}
+            {bulkText && !bulkError && (
+              <p className="text-xs text-muted-foreground">
+                {bulkText.split("\n").filter((l) => l.trim().length >= 2).length} areas ready to import
+              </p>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setBulkOpen(false)}>Cancel</Button>
-            <Button onClick={() => bulkMutation.mutate()} disabled={bulkMutation.isPending || !bulkText.trim()}>
+            <Button variant="outline" onClick={() => { setBulkOpen(false); setBulkError(""); }}>Cancel</Button>
+            <Button
+              onClick={() => { if (validateBulk()) bulkMutation.mutate(); }}
+              disabled={bulkMutation.isPending || !bulkText.trim()}
+            >
               {bulkMutation.isPending ? "Importing..." : "Import"}
             </Button>
           </DialogFooter>
@@ -656,31 +878,31 @@ function AreasSection() {
 }
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
-const AdminSettings = () => {
-  return (
-    <div>
-      <div className="mb-6">
-        <h1 className="font-serif text-3xl font-bold text-foreground">Settings</h1>
-        <p className="text-muted-foreground text-sm mt-1">Manage geographical hierarchy: Countries → States → Cities → Areas</p>
-      </div>
-
-      <Tabs defaultValue="areas">
-        <TabsList className="mb-6">
-          <TabsTrigger value="countries" className="gap-2"><Globe className="h-4 w-4" /> Countries</TabsTrigger>
-          <TabsTrigger value="states" className="gap-2"><Map className="h-4 w-4" /> States</TabsTrigger>
-          <TabsTrigger value="cities" className="gap-2"><Building className="h-4 w-4" /> Cities</TabsTrigger>
-          <TabsTrigger value="areas" className="gap-2"><MapPin className="h-4 w-4" /> Areas</TabsTrigger>
-        </TabsList>
-
-        <div className="bg-card border border-border rounded-xl p-6">
-          <TabsContent value="countries"><CountriesSection /></TabsContent>
-          <TabsContent value="states"><StatesSection /></TabsContent>
-          <TabsContent value="cities"><CitiesSection /></TabsContent>
-          <TabsContent value="areas"><AreasSection /></TabsContent>
-        </div>
-      </Tabs>
+const AdminSettings = () => (
+  <div>
+    <div className="mb-6">
+      <h1 className="font-serif text-3xl font-bold text-foreground">Settings</h1>
+      <p className="text-muted-foreground text-sm mt-1">
+        Manage geographical hierarchy — Countries → States / Regions → Cities → Areas
+      </p>
     </div>
-  );
-};
+
+    <Tabs defaultValue="areas">
+      <TabsList className="mb-6 flex-wrap h-auto gap-1">
+        <TabsTrigger value="countries" className="gap-2"><Globe className="h-4 w-4" /> Countries</TabsTrigger>
+        <TabsTrigger value="states" className="gap-2"><Map className="h-4 w-4" /> States</TabsTrigger>
+        <TabsTrigger value="cities" className="gap-2"><Building className="h-4 w-4" /> Cities</TabsTrigger>
+        <TabsTrigger value="areas" className="gap-2"><MapPin className="h-4 w-4" /> Areas</TabsTrigger>
+      </TabsList>
+
+      <div className="bg-card border border-border rounded-xl p-6">
+        <TabsContent value="countries"><CountriesSection /></TabsContent>
+        <TabsContent value="states"><StatesSection /></TabsContent>
+        <TabsContent value="cities"><CitiesSection /></TabsContent>
+        <TabsContent value="areas"><AreasSection /></TabsContent>
+      </div>
+    </Tabs>
+  </div>
+);
 
 export default AdminSettings;
