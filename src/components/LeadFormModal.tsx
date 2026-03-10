@@ -53,6 +53,7 @@ const LeadFormModal = ({ open, onOpenChange, sourcePage = "homepage" }: LeadForm
       procedure_interest: form.surgery,
       city: form.location,
       source_page: sourcePage,
+      lead_type: "patient_enquiry",
     });
     setLoading(false);
     if (error) {

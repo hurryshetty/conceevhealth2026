@@ -57,6 +57,7 @@ const FAQSection = () => {
       procedure_interest: form.surgery,
       city: form.location,
       source_page: "faq_contact_form",
+      lead_type: "patient_enquiry",
     });
     setLoading(false);
     if (error) {

@@ -89,6 +89,10 @@ const ContactUs = () => {
         procedure_interest: `[${form.subject}] ${form.message}`,
         source_page: "contact-us",
         email: form.email,
+        lead_type: form.subject === "Doctor Partnership" ? "doctor_enquiry"
+          : form.subject === "Hospital Partnership" ? "hospital_enquiry"
+          : form.subject === "Careers" ? "career_enquiry"
+          : "patient_enquiry",
       });
       if (error) throw error;
     },

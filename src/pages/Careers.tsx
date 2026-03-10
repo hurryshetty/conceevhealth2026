@@ -142,6 +142,7 @@ const ResumeSection = ({ title, subtitle, buttonLabel }: { title: string; subtit
         procedure_interest: `Career Application – ${form.role || "General"} | ${form.message}`,
         source_page: "careers",
         email: form.email,
+        lead_type: "career_enquiry",
       });
       if (error) throw error;
     },

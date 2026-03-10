@@ -166,6 +166,7 @@ const HospitalPartnership = () => {
         city: f.city,
         procedure_interest: summary,
         source_page: "hospital-partnership",
+        lead_type: "hospital_enquiry",
       });
       if (error) throw error;
     },
