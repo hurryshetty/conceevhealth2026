@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 const FOR_PATIENTS = [
   { label: "Doctors", href: "/doctors", internal: true },
   { label: "Packages", href: "/packages", internal: true },
-  { label: "FAQs", href: "#faqs", internal: false },
+  { label: "FAQs", href: "/faqs", internal: true },
   { label: "Contact Us", href: "#contact", internal: false },
 ];
 

@@ -19,6 +19,7 @@ import Register from "./pages/Register";
 import HospitalPartnership from "./pages/HospitalPartnership";
 import DoctorPartnership from "./pages/DoctorPartnership";
 import Hospitals from "./pages/Hospitals";
+import FAQs from "./pages/FAQs";
 
 // Admin
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -90,6 +91,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/hospitals" element={<Hospitals />} />
+          <Route path="/faqs" element={<FAQs />} />
           <Route path="/register-your-hospital" element={<HospitalPartnership />} />
           <Route path="/register-as-doctor" element={<DoctorPartnership />} />
 
