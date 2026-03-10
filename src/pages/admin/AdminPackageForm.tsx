@@ -8,22 +8,19 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, X, Save } from "lucide-react";
+import { ArrowLeft, Plus, X, Save, Check, ChevronsUpDown, Loader2, MapPin, Building2 } from "lucide-react";
 import { useSpecialties } from "@/hooks/useSpecialties";
-import { useCities } from "@/hooks/useLocations";
+import { useCountries, useStates, useCities } from "@/hooks/useLocations";
+import { cn } from "@/lib/utils";
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
 const TAG_OPTIONS = [
-  "Most Popular",
-  "Advanced",
-  "Premium",
-  "Budget Friendly",
-  "New",
-  "Recommended",
-  "High Success Rate",
-  "Minimally Invasive",
+  "Most Popular", "Advanced", "Premium", "Budget Friendly",
+  "New", "Recommended", "High Success Rate", "Minimally Invasive",
 ];
 
 const ICON_OPTIONS = [
@@ -43,14 +40,9 @@ const RECOVERY_OPTIONS = [
 ];
 
 const PRESET_FEATURES = [
-  "EMI Options Available",
-  "Free Second Opinion",
-  "Dedicated Care Coordinator",
-  "Insurance Assistance",
-  "International Patient Support",
-  "Post-Treatment Follow-up",
-  "24/7 Support",
-  "Airport Pickup & Drop",
+  "EMI Options Available", "Free Second Opinion", "Dedicated Care Coordinator",
+  "Insurance Assistance", "International Patient Support", "Post-Treatment Follow-up",
+  "24/7 Support", "Airport Pickup & Drop",
 ];
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -82,7 +74,82 @@ const emptyForm: PackageForm = {
   includes: [], available_hospitals: [], features: [],
 };
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
+// ─── Searchable Combobox ───────────────────────────────────────────────────────
+
+interface ComboboxProps {
+  value: string;
+  onValueChange: (v: string) => void;
+  options: { id: string; name: string }[];
+  placeholder: string;
+  searchPlaceholder?: string;
+  disabled?: boolean;
+  loading?: boolean;
+  emptyMessage?: string;
+  allowClear?: boolean;
+}
+
+const SearchableCombobox = ({
+  value, onValueChange, options, placeholder,
+  searchPlaceholder = "Search...", disabled = false,
+  loading = false, emptyMessage = "No results found.", allowClear = false,
+}: ComboboxProps) => {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((o) => o.id === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          disabled={disabled}
+          className={cn(
+            "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
+            "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+            "disabled:cursor-not-allowed disabled:opacity-50",
+            !selected && "text-muted-foreground"
+          )}
+        >
+          {loading ? (
+            <span className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading...
+            </span>
+          ) : (
+            <span className="truncate">{selected ? selected.name : placeholder}</span>
+          )}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <Command>
+          <CommandInput placeholder={searchPlaceholder} />
+          <CommandList>
+            <CommandEmpty>{emptyMessage}</CommandEmpty>
+            <CommandGroup>
+              {allowClear && value && (
+                <CommandItem value="__clear__" onSelect={() => { onValueChange(""); setOpen(false); }}>
+                  <X className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Clear selection</span>
+                </CommandItem>
+              )}
+              {options.map((opt) => (
+                <CommandItem
+                  key={opt.id}
+                  value={opt.name}
+                  onSelect={() => { onValueChange(opt.id); setOpen(false); }}
+                >
+                  <Check className={cn("mr-2 h-4 w-4", value === opt.id ? "opacity-100" : "opacity-0")} />
+                  {opt.name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
+// ─── List Editor ───────────────────────────────────────────────────────────────
 
 const ListEditor = ({
   label, items, placeholder, onChange,
@@ -93,14 +160,12 @@ const ListEditor = ({
   onChange: (items: string[]) => void;
 }) => {
   const [draft, setDraft] = useState("");
-
   const add = () => {
     const v = draft.trim();
     if (!v || items.includes(v)) return;
     onChange([...items, v]);
     setDraft("");
   };
-
   return (
     <div className="space-y-3">
       <Label>{label}</Label>
@@ -120,11 +185,8 @@ const ListEditor = ({
           {items.map((item, i) => (
             <li key={i} className="flex items-center justify-between gap-2 bg-accent rounded-lg px-3 py-2 text-sm">
               <span className="flex-1">{item}</span>
-              <button
-                type="button"
-                onClick={() => onChange(items.filter((_, j) => j !== i))}
-                className="text-muted-foreground hover:text-destructive transition-colors"
-              >
+              <button type="button" onClick={() => onChange(items.filter((_, j) => j !== i))}
+                className="text-muted-foreground hover:text-destructive transition-colors">
                 <X className="h-3.5 w-3.5" />
               </button>
             </li>
@@ -148,35 +210,39 @@ const AdminPackageForm = () => {
   const [form, setForm] = useState<PackageForm>(emptyForm);
   const [customFeature, setCustomFeature] = useState("");
 
-  // ── Fetch cities (for city checkboxes) ───────────────────────────────────
+  // ── City filter state (Country → State → filtered cities) ─────────────────
+  const [filterCountryId, setFilterCountryId] = useState("");
+  const [filterStateId, setFilterStateId] = useState("");
 
-  const { data: cities = [] } = useCities();
+  const { data: countries = [], isLoading: loadingCountries } = useCountries();
+  const { data: states = [], isLoading: loadingStates } = useStates(filterCountryId || undefined);
+  const { data: allCities = [], isLoading: loadingCities } = useCities(filterStateId || undefined);
 
-  // ── Fetch locations/hospitals directly ────────────────────────────────────
+  // ── Hospital filter by city name ───────────────────────────────────────────
+  const [filterHospitalCity, setFilterHospitalCity] = useState("");
 
+  // ── Fetch all cities (unfiltered) for hospital city filter dropdown ────────
+  const { data: allCitiesUnfiltered = [] } = useCities();
+
+  // ── Fetch locations/hospitals ──────────────────────────────────────────────
   const { data: locationsList = [] } = useQuery({
     queryKey: ["locations-for-packages"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("locations")
-        .select("id, name, area, city_id")
+        .select("id, name, areas, city_id, cities(name)")
         .order("name");
       if (error) throw error;
-      return data as { id: string; name: string; area: string; city_id: string }[];
+      return data as { id: string; name: string; areas: string[]; city_id: string; cities: { name: string } | null }[];
     },
   });
 
   // ── Fetch existing package for edit ───────────────────────────────────────
-
   const { data: existing, isLoading } = useQuery({
     queryKey: ["admin-package", id],
     enabled: isEdit,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("packages")
-        .select("*")
-        .eq("id", id!)
-        .single();
+      const { data, error } = await supabase.from("packages").select("*").eq("id", id!).single();
       if (error) throw error;
       return data as any;
     },
@@ -206,28 +272,27 @@ const AdminPackageForm = () => {
     }
   }, [existing]);
 
-  // ── Save ──────────────────────────────────────────────────────────────────
+  // ── Cascade resets for city filter ────────────────────────────────────────
+  const handleFilterCountryChange = (v: string) => {
+    setFilterCountryId(v);
+    setFilterStateId("");
+  };
+  const handleFilterStateChange = (v: string) => {
+    setFilterStateId(v);
+  };
 
+  // ── Save ──────────────────────────────────────────────────────────────────
   const saveMutation = useMutation({
     mutationFn: async (f: PackageForm) => {
       const payload = {
-        slug: f.slug,
-        title: f.title,
-        description: f.description,
-        price: f.price,
-        cities: f.cities,
-        tag: f.tag || null,
-        specialty_id: f.specialty_id || null,
-        icon_name: f.icon_name,
-        success_rate: f.success_rate || null,
+        slug: f.slug, title: f.title, description: f.description, price: f.price,
+        cities: f.cities, tag: f.tag || null, specialty_id: f.specialty_id || null,
+        icon_name: f.icon_name, success_rate: f.success_rate || null,
         total_patients: f.total_patients || null,
         avg_rating: parseFloat(f.avg_rating) || 0,
-        duration: f.duration || null,
-        recovery: f.recovery || null,
-        overview: f.overview || null,
-        includes: f.includes,
-        available_hospitals: f.available_hospitals,
-        features: f.features,
+        duration: f.duration || null, recovery: f.recovery || null,
+        overview: f.overview || null, includes: f.includes,
+        available_hospitals: f.available_hospitals, features: f.features,
       };
       if (isEdit) {
         const { error } = await supabase.from("packages").update(payload).eq("id", id!);
@@ -247,38 +312,30 @@ const AdminPackageForm = () => {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  // ── Hospital toggle ───────────────────────────────────────────────────────
-
-  const toggleHospital = (hospitalName: string) => {
+  // ── Toggles ────────────────────────────────────────────────────────────────
+  const toggleHospital = (hospitalName: string) =>
     setForm((f) => ({
       ...f,
       available_hospitals: f.available_hospitals.includes(hospitalName)
         ? f.available_hospitals.filter((h) => h !== hospitalName)
         : [...f.available_hospitals, hospitalName],
     }));
-  };
 
-  // ── City toggle ───────────────────────────────────────────────────────────
-
-  const toggleCity = (city: string) => {
+  const toggleCity = (cityName: string) =>
     setForm((f) => ({
       ...f,
-      cities: f.cities.includes(city)
-        ? f.cities.filter((c) => c !== city)
-        : [...f.cities, city],
+      cities: f.cities.includes(cityName)
+        ? f.cities.filter((c) => c !== cityName)
+        : [...f.cities, cityName],
     }));
-  };
 
-  // ── Feature toggle ────────────────────────────────────────────────────────
-
-  const toggleFeature = (feat: string) => {
+  const toggleFeature = (feat: string) =>
     setForm((f) => ({
       ...f,
       features: f.features.includes(feat)
         ? f.features.filter((x) => x !== feat)
         : [...f.features, feat],
     }));
-  };
 
   const addCustomFeature = () => {
     const v = customFeature.trim();
@@ -287,10 +344,13 @@ const AdminPackageForm = () => {
     setCustomFeature("");
   };
 
-  // ── Field setter helper ───────────────────────────────────────────────────
-
   const set = (field: keyof PackageForm, value: any) =>
     setForm((f) => ({ ...f, [field]: value }));
+
+  // ── Filtered hospitals (by city name) ─────────────────────────────────────
+  const filteredHospitals = filterHospitalCity
+    ? locationsList.filter((loc) => loc.cities?.name === filterHospitalCity)
+    : locationsList;
 
   if (isEdit && isLoading) {
     return (
@@ -301,17 +361,10 @@ const AdminPackageForm = () => {
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
-
   return (
     <div className="max-w-4xl mx-auto">
-      {/* Page header */}
       <div className="flex items-center gap-4 mb-8">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate("/admin/packages")}
-          className="flex-shrink-0"
-        >
+        <Button variant="ghost" size="icon" onClick={() => navigate("/admin/packages")} className="flex-shrink-0">
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
@@ -338,25 +391,18 @@ const AdminPackageForm = () => {
           <TabsContent value="basic">
             <div className="bg-card border border-border rounded-xl p-6 space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                {/* Title */}
                 <div className="space-y-2">
                   <Label>Title *</Label>
                   <Input required value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="e.g. IVF Treatment Package" />
                 </div>
-
-                {/* Slug */}
                 <div className="space-y-2">
                   <Label>Slug *</Label>
                   <Input required value={form.slug} onChange={(e) => set("slug", e.target.value)} placeholder="e.g. ivf-treatment" />
                 </div>
-
-                {/* Price */}
                 <div className="space-y-2">
                   <Label>Price *</Label>
                   <Input required value={form.price} onChange={(e) => set("price", e.target.value)} placeholder="e.g. ₹1,20,000" />
                 </div>
-
-                {/* Specialty */}
                 <div className="space-y-2">
                   <Label>Specialty</Label>
                   <Select value={form.specialty_id} onValueChange={(v) => set("specialty_id", v)}>
@@ -368,100 +414,149 @@ const AdminPackageForm = () => {
                     </SelectContent>
                   </Select>
                 </div>
-
-                {/* Tag */}
                 <div className="space-y-2">
                   <Label>Tag</Label>
                   <Select value={form.tag || "__none"} onValueChange={(v) => set("tag", v === "__none" ? "" : v)}>
                     <SelectTrigger><SelectValue placeholder="Select tag (optional)" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none">None</SelectItem>
-                      {TAG_OPTIONS.map((t) => (
-                        <SelectItem key={t} value={t}>{t}</SelectItem>
-                      ))}
+                      {TAG_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
-
-                {/* Icon */}
                 <div className="space-y-2">
                   <Label>Icon</Label>
                   <Select value={form.icon_name} onValueChange={(v) => set("icon_name", v)}>
                     <SelectTrigger><SelectValue placeholder="Select icon" /></SelectTrigger>
                     <SelectContent>
-                      {ICON_OPTIONS.map((icon) => (
-                        <SelectItem key={icon} value={icon}>{icon}</SelectItem>
-                      ))}
+                      {ICON_OPTIONS.map((icon) => <SelectItem key={icon} value={icon}>{icon}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
-
-                {/* Duration */}
                 <div className="space-y-2">
                   <Label>Duration</Label>
                   <Select value={form.duration || "__none"} onValueChange={(v) => set("duration", v === "__none" ? "" : v)}>
                     <SelectTrigger><SelectValue placeholder="Select duration" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none">Not specified</SelectItem>
-                      {DURATION_OPTIONS.map((d) => (
-                        <SelectItem key={d} value={d}>{d}</SelectItem>
-                      ))}
+                      {DURATION_OPTIONS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
-
-                {/* Recovery */}
                 <div className="space-y-2">
                   <Label>Recovery Time</Label>
                   <Select value={form.recovery || "__none"} onValueChange={(v) => set("recovery", v === "__none" ? "" : v)}>
                     <SelectTrigger><SelectValue placeholder="Select recovery time" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none">Not specified</SelectItem>
-                      {RECOVERY_OPTIONS.map((r) => (
-                        <SelectItem key={r} value={r}>{r}</SelectItem>
-                      ))}
+                      {RECOVERY_OPTIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
-              {/* Description */}
               <div className="space-y-2">
                 <Label>Short Description</Label>
                 <p className="text-xs text-muted-foreground">One or two lines shown on the package card</p>
                 <Textarea rows={2} value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="Brief summary of this package..." />
               </div>
 
-              {/* Cities multi-select */}
+              {/* ── Available Cities — hierarchical filter ──────────────── */}
               <div className="space-y-3">
-                <Label>Available Cities</Label>
-                <p className="text-xs text-muted-foreground">Select all cities where this package is offered</p>
-                {cities.length > 0 ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {cities.map((city) => (
-                      <label
-                        key={city.id}
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
-                          form.cities.includes(city.name)
-                            ? "border-primary bg-primary/5 text-foreground"
-                            : "border-border bg-card text-muted-foreground hover:border-primary/50"
-                        }`}
+                <div>
+                  <Label>Available Cities</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Use the filters below to browse cities, then check all cities where this package is offered.
+                  </p>
+                </div>
+
+                {/* Country → State filter row */}
+                <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Browse by Location</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Country filter */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Country</Label>
+                      <SearchableCombobox
+                        value={filterCountryId}
+                        onValueChange={handleFilterCountryChange}
+                        options={countries}
+                        placeholder="All countries"
+                        searchPlaceholder="Search countries..."
+                        loading={loadingCountries}
+                        emptyMessage="No countries available."
+                        allowClear
+                      />
+                    </div>
+                    {/* State filter */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">State / Region</Label>
+                      <SearchableCombobox
+                        value={filterStateId}
+                        onValueChange={handleFilterStateChange}
+                        options={states}
+                        placeholder={filterCountryId ? "All states" : "Select country first"}
+                        searchPlaceholder="Search states..."
+                        disabled={!filterCountryId}
+                        loading={loadingStates && !!filterCountryId}
+                        emptyMessage="No states for this country."
+                        allowClear
+                      />
+                    </div>
+                  </div>
+
+                  {/* Cities grid (filtered) */}
+                  {loadingCities && filterStateId ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading cities...
+                    </div>
+                  ) : allCities.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+                      {allCities.map((city) => (
+                        <label
+                          key={city.id}
+                          className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-colors text-sm ${
+                            form.cities.includes(city.name)
+                              ? "border-primary bg-primary/5 text-foreground"
+                              : "border-border bg-background text-muted-foreground hover:border-primary/50"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="accent-primary"
+                            checked={form.cities.includes(city.name)}
+                            onChange={() => toggleCity(city.name)}
+                          />
+                          <span className="font-medium text-foreground">{city.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  ) : filterStateId ? (
+                    <p className="text-sm text-orange-500 py-1">No cities found for this state.</p>
+                  ) : filterCountryId ? (
+                    <p className="text-sm text-muted-foreground py-1">Select a state to see cities.</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground py-1">Select a country to browse cities, or view all selected cities below.</p>
+                  )}
+                </div>
+
+                {/* Selected cities summary */}
+                {form.cities.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {form.cities.map((c) => (
+                      <span
+                        key={c}
+                        className="inline-flex items-center gap-1.5 text-xs bg-primary/10 text-primary border border-primary/20 px-2.5 py-1 rounded-full cursor-pointer hover:bg-primary/20"
+                        onClick={() => toggleCity(c)}
                       >
-                        <input
-                          type="checkbox"
-                          className="accent-primary"
-                          checked={form.cities.includes(city.name)}
-                          onChange={() => toggleCity(city.name)}
-                        />
-                        <span className="font-medium text-foreground">{city.name}</span>
-                      </label>
+                        <MapPin className="h-2.5 w-2.5" />
+                        {c}
+                        <span className="opacity-60">×</span>
+                      </span>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground italic">No cities found. Add cities first.</p>
-                )}
-                {form.cities.length > 0 && (
-                  <p className="text-xs text-muted-foreground">Selected: {form.cities.join(", ")}</p>
+                  <p className="text-xs text-muted-foreground italic">No cities selected yet.</p>
                 )}
               </div>
             </div>
@@ -470,7 +565,6 @@ const AdminPackageForm = () => {
           {/* ── Tab: Overview ──────────────────────────────────────────────── */}
           <TabsContent value="overview">
             <div className="bg-card border border-border rounded-xl p-6 space-y-6">
-              {/* Overview text */}
               <div className="space-y-2">
                 <Label>Package Overview</Label>
                 <p className="text-xs text-muted-foreground">Detailed description shown on the package detail page</p>
@@ -482,7 +576,6 @@ const AdminPackageForm = () => {
                 />
               </div>
 
-              {/* Features checkboxes */}
               <div className="space-y-3 pt-2 border-t border-border">
                 <div>
                   <Label>Package Features</Label>
@@ -498,18 +591,11 @@ const AdminPackageForm = () => {
                           : "border-border bg-card text-muted-foreground hover:border-primary/50"
                       }`}
                     >
-                      <input
-                        type="checkbox"
-                        className="accent-primary"
-                        checked={form.features.includes(feat)}
-                        onChange={() => toggleFeature(feat)}
-                      />
+                      <input type="checkbox" className="accent-primary" checked={form.features.includes(feat)} onChange={() => toggleFeature(feat)} />
                       {feat}
                     </label>
                   ))}
                 </div>
-
-                {/* Custom feature */}
                 <div className="pt-2">
                   <Label className="text-xs text-muted-foreground mb-2 block">Add a custom feature</Label>
                   <div className="flex gap-2">
@@ -524,8 +610,6 @@ const AdminPackageForm = () => {
                     </Button>
                   </div>
                 </div>
-
-                {/* Custom features list */}
                 {form.features.filter((f) => !PRESET_FEATURES.includes(f)).length > 0 && (
                   <div className="space-y-1.5">
                     {form.features.filter((f) => !PRESET_FEATURES.includes(f)).map((feat) => (
@@ -565,21 +649,52 @@ const AdminPackageForm = () => {
           {/* ── Tab: Available Hospitals ────────────────────────────────────── */}
           <TabsContent value="hospitals">
             <div className="bg-card border border-border rounded-xl p-6 space-y-5">
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  Select the hospitals where this treatment is available. Shown on the package detail page.
-                </p>
+              <p className="text-sm text-muted-foreground">
+                Select the hospitals where this treatment is available. Shown on the package detail page.
+              </p>
+
+              {/* City filter for hospitals */}
+              <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Filter Hospitals by City</p>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <Select
+                      value={filterHospitalCity || "__all"}
+                      onValueChange={(v) => setFilterHospitalCity(v === "__all" ? "" : v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="All cities" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all">All cities</SelectItem>
+                        {allCitiesUnfiltered.map((c) => (
+                          <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {filterHospitalCity && (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setFilterHospitalCity("")} className="text-muted-foreground">
+                      <X className="h-3.5 w-3.5 mr-1" /> Clear
+                    </Button>
+                  )}
+                </div>
+                {filterHospitalCity && (
+                  <p className="text-xs text-muted-foreground">
+                    Showing {filteredHospitals.length} hospital{filteredHospitals.length !== 1 ? "s" : ""} in {filterHospitalCity}
+                  </p>
+                )}
               </div>
 
-              {/* Hospital checkboxes from locations table */}
-              {locationsList.length > 0 ? (
+              {/* Hospital checkboxes */}
+              {filteredHospitals.length > 0 ? (
                 <div className="space-y-3">
                   <Label>Select Hospitals</Label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {locationsList.map((loc) => (
+                    {filteredHospitals.map((loc) => (
                       <label
                         key={loc.id}
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
+                        className={`flex items-start gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
                           form.available_hospitals.includes(loc.name)
                             ? "border-primary bg-primary/5 text-foreground"
                             : "border-border bg-card text-muted-foreground hover:border-primary/50"
@@ -587,14 +702,16 @@ const AdminPackageForm = () => {
                       >
                         <input
                           type="checkbox"
-                          className="accent-primary flex-shrink-0"
+                          className="accent-primary flex-shrink-0 mt-0.5"
                           checked={form.available_hospitals.includes(loc.name)}
                           onChange={() => toggleHospital(loc.name)}
                         />
                         <span>
-                          <span className="font-medium text-foreground">{loc.name}</span>
-                          {loc.area && (
-                            <span className="text-muted-foreground text-xs block mt-0.5">{loc.area}</span>
+                          <span className="font-medium text-foreground block">{loc.name}</span>
+                          {loc.cities?.name && (
+                            <span className="text-muted-foreground text-xs flex items-center gap-1 mt-0.5">
+                              <MapPin className="h-2.5 w-2.5" /> {loc.cities.name}
+                            </span>
                           )}
                         </span>
                       </label>
@@ -603,31 +720,32 @@ const AdminPackageForm = () => {
                 </div>
               ) : (
                 <div className="text-center py-6 text-muted-foreground text-sm border border-dashed border-border rounded-xl">
-                  No hospitals found. Add locations first under Admin → Locations.
+                  <Building2 className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                  {filterHospitalCity
+                    ? `No hospitals found in ${filterHospitalCity}.`
+                    : "No hospitals found. Add locations first under Admin → Hospitals."}
                 </div>
               )}
 
-              {/* Manual add for hospitals not in the locations table */}
+              {/* Manual hospital input */}
               <div className="border-t border-border pt-5">
                 <ListEditor
                   label="Add Hospital Manually"
-                  items={form.available_hospitals.filter(
-                    (h) => !locationsList.some((loc) => loc.name === h)
-                  )}
+                  items={form.available_hospitals.filter((h) => !locationsList.some((loc) => loc.name === h))}
                   placeholder="e.g. Conceev Fertility Centre, Bangalore"
                   onChange={(manualItems) => {
-                    const dbSelected = form.available_hospitals.filter((h) =>
-                      locationsList.some((loc) => loc.name === h)
-                    );
+                    const dbSelected = form.available_hospitals.filter((h) => locationsList.some((loc) => loc.name === h));
                     set("available_hospitals", [...dbSelected, ...manualItems]);
                   }}
                 />
               </div>
 
-              {/* Summary */}
+              {/* Selected summary */}
               {form.available_hospitals.length > 0 && (
                 <div className="bg-accent rounded-lg p-3 text-sm">
-                  <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Selected ({form.available_hospitals.length})</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">
+                    Selected ({form.available_hospitals.length})
+                  </p>
                   <div className="flex flex-wrap gap-1.5">
                     {form.available_hospitals.map((h) => (
                       <span key={h} className="inline-flex items-center gap-1.5 bg-background border border-border rounded-md px-2.5 py-1 text-xs">
@@ -663,8 +781,6 @@ const AdminPackageForm = () => {
                   <Input type="number" step="0.1" min="0" max="5" value={form.avg_rating} onChange={(e) => set("avg_rating", e.target.value)} />
                 </div>
               </div>
-
-              {/* Stats preview */}
               {(form.success_rate || form.total_patients || (form.avg_rating && parseFloat(form.avg_rating) > 0)) && (
                 <div className="p-4 bg-accent rounded-xl">
                   <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">Preview</p>
@@ -694,7 +810,6 @@ const AdminPackageForm = () => {
           </TabsContent>
         </Tabs>
 
-        {/* Sticky footer actions */}
         <div className="flex justify-end gap-3 mt-6 py-4 border-t border-border sticky bottom-0 bg-background">
           <Button type="button" variant="outline" onClick={() => navigate("/admin/packages")}>
             Cancel
