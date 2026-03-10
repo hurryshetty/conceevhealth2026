@@ -42,7 +42,13 @@ interface UserInfo {
 }
 
 const callManageUsers = async (body: Record<string, any>) => {
-  const { data, error } = await supabase.functions.invoke("manage-users", { body });
+  // Explicitly get session token to ensure it's always passed (not the anon key)
+  const { data: { session } } = await supabase.auth.getSession();
+  const headers: Record<string, string> = {};
+  if (session?.access_token) {
+    headers["Authorization"] = `Bearer ${session.access_token}`;
+  }
+  const { data, error } = await supabase.functions.invoke("manage-users", { body, headers });
   if (error) {
     // Extract the actual error message from the Edge Function response body
     try {
