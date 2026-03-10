@@ -42,23 +42,27 @@ interface UserInfo {
 }
 
 const callManageUsers = async (body: Record<string, any>) => {
-  // Explicitly get session token to ensure it's always passed (not the anon key)
+  // Get session — if null, user must sign in again
   const { data: { session } } = await supabase.auth.getSession();
-  const headers: Record<string, string> = {};
-  if (session?.access_token) {
-    headers["Authorization"] = `Bearer ${session.access_token}`;
+  if (!session?.access_token) {
+    throw new Error("Session expired — please sign out and sign back in");
   }
-  const { data, error } = await supabase.functions.invoke("manage-users", { body, headers });
-  if (error) {
-    // Extract the actual error message from the Edge Function response body
-    try {
-      const errBody = await (error as any).context?.json?.();
-      const msg = errBody?.error || errBody?.message || error.message;
-      throw new Error(msg);
-    } catch (inner: any) {
-      throw new Error(inner.message || error.message || "Request failed");
-    }
-  }
+
+  // Use raw fetch so the Authorization header is never overridden by the SDK
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+  const response = await fetch(`${supabaseUrl}/functions/v1/manage-users`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${session.access_token}`,
+      "apikey": anonKey,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data?.error || `HTTP ${response.status}`);
   if (data?.error) throw new Error(data.error);
   return data;
 };
