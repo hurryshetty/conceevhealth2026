@@ -17,6 +17,7 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import HospitalPartnership from "./pages/HospitalPartnership";
+import DoctorPartnership from "./pages/DoctorPartnership";
 
 // Admin
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -88,6 +89,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/register-your-hospital" element={<HospitalPartnership />} />
+          <Route path="/register-as-doctor" element={<DoctorPartnership />} />
 
           {/* Admin */}
           <Route path="/admin/login" element={<AdminLogin />} />
