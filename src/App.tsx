@@ -22,6 +22,7 @@ import Hospitals from "./pages/Hospitals";
 import FAQs from "./pages/FAQs";
 import AboutUs from "./pages/AboutUs";
 import Careers from "./pages/Careers";
+import ContactUs from "./pages/ContactUs";
 
 // Admin
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -96,6 +97,7 @@ const App = () => (
           <Route path="/faqs" element={<FAQs />} />
           <Route path="/about-us" element={<AboutUs />} />
           <Route path="/careers" element={<Careers />} />
+          <Route path="/contact-us" element={<ContactUs />} />
           <Route path="/register-your-hospital" element={<HospitalPartnership />} />
           <Route path="/register-as-doctor" element={<DoctorPartnership />} />
 
