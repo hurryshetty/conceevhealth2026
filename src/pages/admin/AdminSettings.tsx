@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Globe, Map, Building, MapPin, ChevronRight, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Globe, Map, Building, MapPin, ChevronRight, Search, Star } from "lucide-react";
 import { useCountries, useStates, useCities, useAreas } from "@/hooks/useLocations";
 import type { Country, State, City, Area } from "@/hooks/useLocations";
 
@@ -503,6 +503,18 @@ function CitiesSection() {
     onError: (e: any) => toast({ title: "Error", description: friendlyError(e), variant: "destructive" }),
   });
 
+  const featuredMutation = useMutation({
+    mutationFn: async ({ id, is_featured }: { id: string; is_featured: boolean }) => {
+      const { error } = await supabase.from("cities").update({ is_featured }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["cities"] });
+      qc.invalidateQueries({ queryKey: ["cities-featured"] });
+    },
+    onError: (e: any) => toast({ title: "Error", description: friendlyError(e), variant: "destructive" }),
+  });
+
   const filtered = cities.filter((c) =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
     c.slug.toLowerCase().includes(search.toLowerCase())
@@ -554,6 +566,11 @@ function CitiesSection() {
                 <TableRow>
                   <TableHead>City Name</TableHead>
                   <TableHead>URL Slug</TableHead>
+                  <TableHead className="w-[120px] text-center">
+                    <span className="flex items-center justify-center gap-1">
+                      <Star className="h-3.5 w-3.5" /> Homepage
+                    </span>
+                  </TableHead>
                   <TableHead className="w-[80px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -562,6 +579,20 @@ function CitiesSection() {
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{c.name}</TableCell>
                     <TableCell><span className="font-mono text-xs text-muted-foreground">{c.slug}</span></TableCell>
+                    <TableCell className="text-center">
+                      <button
+                        onClick={() => featuredMutation.mutate({ id: c.id, is_featured: !c.is_featured })}
+                        disabled={featuredMutation.isPending}
+                        title={c.is_featured ? "Remove from homepage" : "Show on homepage"}
+                        className={`inline-flex items-center justify-center w-8 h-8 rounded-full transition-colors ${
+                          c.is_featured
+                            ? "bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
+                            : "text-muted-foreground hover:bg-secondary"
+                        }`}
+                      >
+                        <Star className={`h-4 w-4 ${c.is_featured ? "fill-yellow-500" : ""}`} />
+                      </button>
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
                         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(c)}>
@@ -575,7 +606,7 @@ function CitiesSection() {
                   </TableRow>
                 ))}
                 {filtered.length === 0 && (
-                  <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-8">No cities found</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">No cities found</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>

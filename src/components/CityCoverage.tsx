@@ -1,23 +1,22 @@
 import { useState, useMemo } from "react";
 import { MapPin, ArrowRight, Building2, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useCities } from "@/hooks/useLocations";
-import { useLocations } from "@/hooks/useLocations";
+import { useFeaturedCities, useLocations } from "@/hooks/useLocations";
 
 const CityCoverage = () => {
-  const { data: cities = [] } = useCities();
+  const { data: cities = [] } = useFeaturedCities();
   const { data: locations = [] } = useLocations();
   const [activeCity, setActiveCity] = useState<string>("");
   const [selectedArea, setSelectedArea] = useState<Record<string, string>>({});
   const [scrollIndex, setScrollIndex] = useState(0);
 
-  // Set default active city once loaded
   const activeCityName = activeCity || cities[0]?.name || "";
 
   const cityData = useMemo(() => {
     return cities.map((c) => {
       const cityLocations = locations.filter((l) => l.city_id === c.id);
-      const areas = [...new Set(cityLocations.map((l) => l.area))].sort();
+      // Collect all unique areas across all hospitals in this city
+      const areas = [...new Set(cityLocations.flatMap((l) => l.areas || []))].sort();
       return {
         ...c,
         count: `${cityLocations.length}+ Clinics`,
@@ -52,7 +51,7 @@ const CityCoverage = () => {
           Clinics Near You
         </h2>
         <p className="text-center text-muted-foreground mb-12 max-w-lg mx-auto">
-          Partner hospitals across Bangalore & Hyderabad for convenient access.
+          Partner hospitals across {cities.map((c) => c.name).join(" & ")} for convenient access.
         </p>
 
         {/* City tabs */}
@@ -89,27 +88,32 @@ const CityCoverage = () => {
           .filter((c) => c.name === activeCityName)
           .map((c) => {
             const activeArea = selectedArea[c.name] || c.areas[0] || "";
-            const filteredHospitals = c.hospitals.filter((h) => h.area === activeArea);
+            // A hospital matches if its areas array includes the selected area
+            const filteredHospitals = activeArea
+              ? c.hospitals.filter((h) => (h.areas || []).includes(activeArea))
+              : c.hospitals;
             const maxScroll = Math.max(0, filteredHospitals.length - 2);
 
             return (
               <div key={c.id} className="bg-card rounded-b-2xl border border-t-0 border-border p-6 shadow-sm">
                 {/* Area chips */}
-                <div className="flex flex-wrap gap-2 mb-4 overflow-x-auto pb-1">
-                  {c.areas.map((a) => (
-                    <button
-                      key={a}
-                      onClick={() => handleAreaClick(c.name, a)}
-                      className={`text-sm px-3.5 py-1.5 rounded-full transition-all cursor-pointer font-medium whitespace-nowrap shrink-0 ${
-                        activeArea === a
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "bg-secondary text-secondary-foreground hover:bg-primary/10"
-                      }`}
-                    >
-                      {a}
-                    </button>
-                  ))}
-                </div>
+                {c.areas.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-4 overflow-x-auto pb-1">
+                    {c.areas.map((a) => (
+                      <button
+                        key={a}
+                        onClick={() => handleAreaClick(c.name, a)}
+                        className={`text-sm px-3.5 py-1.5 rounded-full transition-all cursor-pointer font-medium whitespace-nowrap shrink-0 ${
+                          activeArea === a
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "bg-secondary text-secondary-foreground hover:bg-primary/10"
+                        }`}
+                      >
+                        {a}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 <a
                   href="#contact"
@@ -119,11 +123,11 @@ const CityCoverage = () => {
                 </a>
 
                 {/* Hospital cards carousel */}
-                {activeArea && filteredHospitals.length > 0 && (
+                {filteredHospitals.length > 0 && (
                   <div className="pt-5 mt-4 border-t border-border">
                     <div className="flex items-center justify-between mb-4">
                       <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
-                        Hospitals in {activeArea}
+                        {activeArea ? `Hospitals in ${activeArea}` : `Hospitals in ${c.name}`}
                       </p>
                       {filteredHospitals.length > 2 && (
                         <div className="flex gap-2">
@@ -162,7 +166,10 @@ const CityCoverage = () => {
                               <div>
                                 <p className="text-sm font-bold text-foreground leading-tight">{h.name}</p>
                                 <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                                  <MapPin className="h-3 w-3" /> {h.area}, {h.city_name}
+                                  <MapPin className="h-3 w-3" />
+                                  {(h.areas || []).slice(0, 2).join(", ")}
+                                  {(h.areas || []).length > 2 && ` +${h.areas.length - 2} more`}
+                                  {h.city_name && `, ${h.city_name}`}
                                 </p>
                               </div>
                             </div>

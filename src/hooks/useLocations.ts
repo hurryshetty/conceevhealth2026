@@ -19,6 +19,7 @@ export interface City {
   slug: string;
   state_id?: string | null;
   country_id?: string | null;
+  is_featured?: boolean;
 }
 
 export interface Area {
@@ -92,6 +93,21 @@ export const useAreas = (cityId?: string) => {
       return data as Area[];
     },
     enabled: !!cityId,
+  });
+};
+
+export const useFeaturedCities = () => {
+  return useQuery({
+    queryKey: ["cities-featured"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cities")
+        .select("*")
+        .eq("is_featured", true)
+        .order("name");
+      if (error) throw error;
+      return data as City[];
+    },
   });
 };
 
