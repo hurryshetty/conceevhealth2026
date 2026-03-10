@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { MapPin, ArrowRight, Building2, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFeaturedCities, useLocations } from "@/hooks/useLocations";
@@ -7,6 +8,7 @@ const CityCoverage = () => {
   const { data: cities = [] } = useFeaturedCities();
   const { data: locations = [] } = useLocations();
   const [activeCity, setActiveCity] = useState<string>("");
+  // "" means "All" (no filter)
   const [selectedArea, setSelectedArea] = useState<Record<string, string>>({});
   const [scrollIndex, setScrollIndex] = useState(0);
 
@@ -15,11 +17,10 @@ const CityCoverage = () => {
   const cityData = useMemo(() => {
     return cities.map((c) => {
       const cityLocations = locations.filter((l) => l.city_id === c.id);
-      // Collect all unique areas across all hospitals in this city
       const areas = [...new Set(cityLocations.flatMap((l) => l.areas || []))].sort();
       return {
         ...c,
-        count: `${cityLocations.length}+ Clinics`,
+        count: `${cityLocations.length}+ Hospitals`,
         areas,
         hospitals: cityLocations,
       };
@@ -29,16 +30,16 @@ const CityCoverage = () => {
   const handleCityClick = (city: string) => {
     setActiveCity(city);
     setScrollIndex(0);
-    if (!selectedArea[city]) {
-      const cd = cityData.find((c) => c.name === city);
-      if (cd && cd.areas.length > 0) {
-        setSelectedArea((prev) => ({ ...prev, [city]: cd.areas[0] }));
-      }
-    }
+    // Default to "All" — do not auto-select any area
   };
 
   const handleAreaClick = (city: string, area: string) => {
     setSelectedArea((prev) => ({ ...prev, [city]: area }));
+    setScrollIndex(0);
+  };
+
+  const handleAllClick = (city: string) => {
+    setSelectedArea((prev) => ({ ...prev, [city]: "" }));
     setScrollIndex(0);
   };
 
@@ -48,7 +49,7 @@ const CityCoverage = () => {
     <section id="cities" className="py-16 md:py-20 bg-secondary/50">
       <div className="container mx-auto px-4">
         <h2 className="font-serif text-3xl md:text-4xl font-bold text-center mb-4 text-foreground">
-          Clinics Near You
+          Hospitals Near You
         </h2>
         <p className="text-center text-muted-foreground mb-12 max-w-lg mx-auto">
           Partner hospitals across {cities.map((c) => c.name).join(" & ")} for convenient access.
@@ -87,8 +88,8 @@ const CityCoverage = () => {
         {cityData
           .filter((c) => c.name === activeCityName)
           .map((c) => {
-            const activeArea = selectedArea[c.name] || c.areas[0] || "";
-            // A hospital matches if its areas array includes the selected area
+            const activeArea = selectedArea[c.name] ?? "";
+            // "" = All areas (show all hospitals in the city)
             const filteredHospitals = activeArea
               ? c.hospitals.filter((h) => (h.areas || []).includes(activeArea))
               : c.hospitals;
@@ -96,9 +97,20 @@ const CityCoverage = () => {
 
             return (
               <div key={c.id} className="bg-card rounded-b-2xl border border-t-0 border-border p-6 shadow-sm">
-                {/* Area chips */}
+                {/* Area chips carousel — "All" first, then areas */}
                 {c.areas.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-4 overflow-x-auto pb-1">
+                  <div className="flex gap-2 mb-4 overflow-x-auto pb-1 scrollbar-none">
+                    {/* All chip */}
+                    <button
+                      onClick={() => handleAllClick(c.name)}
+                      className={`text-sm px-3.5 py-1.5 rounded-full transition-all cursor-pointer font-medium whitespace-nowrap shrink-0 ${
+                        !activeArea
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "bg-secondary text-secondary-foreground hover:bg-primary/10"
+                      }`}
+                    >
+                      All
+                    </button>
                     {c.areas.map((a) => (
                       <button
                         key={a}
@@ -115,19 +127,19 @@ const CityCoverage = () => {
                   </div>
                 )}
 
-                <a
-                  href="#contact"
+                <Link
+                  to="/hospitals"
                   className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:gap-2 transition-all"
                 >
-                  Find Clinics <ArrowRight className="h-4 w-4" />
-                </a>
+                  Find Hospitals <ArrowRight className="h-4 w-4" />
+                </Link>
 
                 {/* Hospital cards carousel */}
                 {filteredHospitals.length > 0 && (
                   <div className="pt-5 mt-4 border-t border-border">
                     <div className="flex items-center justify-between mb-4">
                       <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
-                        {activeArea ? `Hospitals in ${activeArea}` : `Hospitals in ${c.name}`}
+                        {activeArea ? `Hospitals in ${activeArea}` : `All Hospitals in ${c.name}`}
                       </p>
                       {filteredHospitals.length > 2 && (
                         <div className="flex gap-2">
@@ -149,9 +161,9 @@ const CityCoverage = () => {
                       )}
                     </div>
 
-                    <div className="overflow-x-auto pb-2 -mx-1 px-1">
+                    <div className="overflow-hidden">
                       <div
-                        className="flex gap-4 transition-transform duration-300 md:transition-transform"
+                        className="flex gap-4 transition-transform duration-300"
                         style={{ transform: `translateX(-${scrollIndex * 292}px)` }}
                       >
                         {filteredHospitals.map((h, i) => (
@@ -174,7 +186,7 @@ const CityCoverage = () => {
                               </div>
                             </div>
                             <div className="flex flex-wrap gap-1.5">
-                              {h.surgeries.map((s) => (
+                              {h.surgeries.slice(0, 4).map((s) => (
                                 <span
                                   key={s}
                                   className="text-[11px] px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground font-medium"
@@ -182,15 +194,28 @@ const CityCoverage = () => {
                                   {s}
                                 </span>
                               ))}
+                              {h.surgeries.length > 4 && (
+                                <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+                                  +{h.surgeries.length - 4}
+                                </span>
+                              )}
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs w-full mt-auto">
-                              View Hospital
-                            </Button>
+                            <Link to="/hospitals" className="mt-auto">
+                              <Button size="sm" variant="outline" className="text-xs w-full">
+                                View Hospital
+                              </Button>
+                            </Link>
                           </div>
                         ))}
                       </div>
                     </div>
                   </div>
+                )}
+
+                {filteredHospitals.length === 0 && (
+                  <p className="text-sm text-muted-foreground mt-4 italic">
+                    No hospitals found in {activeArea}. Try a different area.
+                  </p>
                 )}
               </div>
             );
