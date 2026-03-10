@@ -14,7 +14,7 @@ const FOR_PATIENTS = [
 ];
 
 const OUR_COMPANY = [
-  { label: "About Us", href: "#about", internal: false },
+  { label: "About Us", href: "/about-us", internal: true },
   { label: "Doctor Onboarding", href: "/register-as-doctor", internal: true },
   { label: "Partner With Us", href: "/register-your-hospital", internal: true },
   { label: "Careers", href: "#careers", internal: false },
