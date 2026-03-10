@@ -8,10 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, X, Save } from "lucide-react";
+import { ArrowLeft, Plus, X, Save, Check, ChevronsUpDown, Loader2, MapPin, Building2 } from "lucide-react";
 import { useSpecialties } from "@/hooks/useSpecialties";
-import { useCities } from "@/hooks/useLocations";
+import { useCountries, useStates, useCities } from "@/hooks/useLocations";
+import { cn } from "@/lib/utils";
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -67,6 +70,81 @@ const emptyForm: DoctorForm = {
   bio: "", consultation_fee: "",
   qualifications: [], specializations: [], surgeries: [],
   hospitals: [], cities: [], languages: [],
+};
+
+// ─── Searchable Combobox ───────────────────────────────────────────────────────
+
+interface ComboboxProps {
+  value: string;
+  onValueChange: (v: string) => void;
+  options: { id: string; name: string }[];
+  placeholder: string;
+  searchPlaceholder?: string;
+  disabled?: boolean;
+  loading?: boolean;
+  emptyMessage?: string;
+  allowClear?: boolean;
+}
+
+const SearchableCombobox = ({
+  value, onValueChange, options, placeholder,
+  searchPlaceholder = "Search...", disabled = false,
+  loading = false, emptyMessage = "No results found.", allowClear = false,
+}: ComboboxProps) => {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((o) => o.id === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          disabled={disabled}
+          className={cn(
+            "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
+            "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+            "disabled:cursor-not-allowed disabled:opacity-50",
+            !selected && "text-muted-foreground"
+          )}
+        >
+          {loading ? (
+            <span className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading...
+            </span>
+          ) : (
+            <span className="truncate">{selected ? selected.name : placeholder}</span>
+          )}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <Command>
+          <CommandInput placeholder={searchPlaceholder} />
+          <CommandList>
+            <CommandEmpty>{emptyMessage}</CommandEmpty>
+            <CommandGroup>
+              {allowClear && value && (
+                <CommandItem value="__clear__" onSelect={() => { onValueChange(""); setOpen(false); }}>
+                  <X className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Clear selection</span>
+                </CommandItem>
+              )}
+              {options.map((opt) => (
+                <CommandItem
+                  key={opt.id}
+                  value={opt.name}
+                  onSelect={() => { onValueChange(opt.id); setOpen(false); }}
+                >
+                  <Check className={cn("mr-2 h-4 w-4", value === opt.id ? "opacity-100" : "opacity-0")} />
+                  {opt.name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
 };
 
 // ─── List Editor ───────────────────────────────────────────────────────────────
@@ -179,20 +257,37 @@ const AdminDoctorForm = () => {
   const set = (field: keyof DoctorForm, value: any) =>
     setForm((f) => ({ ...f, [field]: value }));
 
-  // ── Data sources ──────────────────────────────────────────────────────────
+  // ── City filter state (Country → State → filtered cities) ─────────────────
+  const [filterCountryId, setFilterCountryId] = useState("");
+  const [filterStateId, setFilterStateId] = useState("");
 
+  const { data: countries = [], isLoading: loadingCountries } = useCountries();
+  const { data: states = [], isLoading: loadingStates } = useStates(filterCountryId || undefined);
+  const { data: filteredCities = [], isLoading: loadingCities } = useCities(filterStateId || undefined);
+
+  const handleFilterCountryChange = (v: string) => {
+    setFilterCountryId(v);
+    setFilterStateId("");
+  };
+
+  // ── Hospital filter by city name ───────────────────────────────────────────
+  const [filterHospitalCity, setFilterHospitalCity] = useState("");
+
+  // ── All cities unfiltered for hospital city filter dropdown ───────────────
+  const { data: allCitiesUnfiltered = [] } = useCities();
+
+  // ── Data sources ──────────────────────────────────────────────────────────
   const { data: specialties = [] } = useSpecialties();
-  const { data: cities = [] } = useCities();
 
   const { data: locationsList = [] } = useQuery({
     queryKey: ["locations-for-doctors"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("locations")
-        .select("id, name, area")
+        .select("id, name, areas, city_id, cities(name)")
         .order("name");
       if (error) throw error;
-      return data as { id: string; name: string; area: string }[];
+      return data as { id: string; name: string; areas: string[]; city_id: string; cities: { name: string } | null }[];
     },
   });
 
@@ -279,6 +374,11 @@ const AdminDoctorForm = () => {
           ? f[field].filter((v) => v !== value)
           : [...f[field], value],
       }));
+
+  // ── Filtered hospitals ────────────────────────────────────────────────────
+  const visibleHospitals = filterHospitalCity
+    ? locationsList.filter((l) => (l.cities?.name || "") === filterHospitalCity)
+    : locationsList;
 
   if (isEdit && isLoading) {
     return (
@@ -374,17 +474,102 @@ const AdminDoctorForm = () => {
                 </div>
               </div>
 
-              {/* Cities checkboxes */}
-              <CheckboxGroup
-                label="Available Cities"
-                hint="Select all cities where this doctor practises"
-                options={cities.map((c) => ({ id: c.id, label: c.name }))}
-                selected={form.cities}
-                onToggle={toggle("cities")}
-              />
-              {form.cities.length > 0 && (
-                <p className="text-xs text-muted-foreground -mt-1">Selected: {form.cities.join(", ")}</p>
-              )}
+              {/* Cities — hierarchical Country → State → City filter */}
+              <div className="border-t border-border pt-5 space-y-4">
+                <div>
+                  <Label>Available Cities</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Filter by country and state, then select the cities where this doctor practises
+                  </p>
+                </div>
+
+                {/* Filter row */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 bg-muted/40 rounded-lg border border-border">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wide">Country</Label>
+                    <SearchableCombobox
+                      value={filterCountryId}
+                      onValueChange={handleFilterCountryChange}
+                      options={countries.map((c) => ({ id: c.id, name: c.name }))}
+                      placeholder="Select country"
+                      searchPlaceholder="Search countries..."
+                      loading={loadingCountries}
+                      allowClear
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wide">State / Region</Label>
+                    <SearchableCombobox
+                      value={filterStateId}
+                      onValueChange={setFilterStateId}
+                      options={states.map((s) => ({ id: s.id, name: s.name }))}
+                      placeholder={filterCountryId ? "Select state" : "Select country first"}
+                      searchPlaceholder="Search states..."
+                      disabled={!filterCountryId}
+                      loading={loadingStates && !!filterCountryId}
+                      allowClear
+                    />
+                  </div>
+                </div>
+
+                {/* City checkboxes */}
+                {filterStateId ? (
+                  loadingCities ? (
+                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading cities...
+                    </p>
+                  ) : filteredCities.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {filteredCities.map((c) => (
+                        <label
+                          key={c.id}
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
+                            form.cities.includes(c.name)
+                              ? "border-primary bg-primary/5 text-foreground"
+                              : "border-border bg-card text-muted-foreground hover:border-primary/50"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="accent-primary flex-shrink-0"
+                            checked={form.cities.includes(c.name)}
+                            onChange={() => toggle("cities")(c.name)}
+                          />
+                          <span className="font-medium text-foreground">{c.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">No cities found for this state.</p>
+                  )
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">
+                    Select a country and state above to browse cities.
+                  </p>
+                )}
+
+                {/* Selected cities summary */}
+                {form.cities.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {form.cities.map((city) => (
+                      <span
+                        key={city}
+                        className="inline-flex items-center gap-1.5 bg-primary/10 text-primary rounded-full px-3 py-1 text-xs font-medium"
+                      >
+                        <MapPin className="h-3 w-3" />
+                        {city}
+                        <button
+                          type="button"
+                          onClick={() => toggle("cities")(city)}
+                          className="hover:text-destructive transition-colors ml-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {/* Languages checkboxes */}
               <div className="space-y-3 border-t border-border pt-5">
@@ -523,39 +708,73 @@ const AdminDoctorForm = () => {
                 Select the hospitals where this doctor is available. Shown on the doctor's profile page.
               </p>
 
-              {/* Hospital checkboxes from locations table */}
-              {locationsList.length > 0 ? (
-                <div className="space-y-3">
-                  <Label>Select Hospitals</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {locationsList.map((loc) => (
+              {/* City filter */}
+              <div className="space-y-1.5">
+                <Label>Filter by City</Label>
+                <Select value={filterHospitalCity || "__all"} onValueChange={(v) => setFilterHospitalCity(v === "__all" ? "" : v)}>
+                  <SelectTrigger className="max-w-xs">
+                    <SelectValue placeholder="All cities" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all">All cities</SelectItem>
+                    {allCitiesUnfiltered.map((c) => (
+                      <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Hospital cards */}
+              {visibleHospitals.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {visibleHospitals.map((loc) => {
+                    const cityName = loc.cities?.name || "";
+                    const isSelected = form.hospitals.includes(loc.name);
+                    return (
                       <label
                         key={loc.id}
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
-                          form.hospitals.includes(loc.name)
-                            ? "border-primary bg-primary/5 text-foreground"
-                            : "border-border bg-card text-muted-foreground hover:border-primary/50"
+                        className={`flex items-start gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all ${
+                          isSelected
+                            ? "border-primary bg-primary/5"
+                            : "border-border bg-card hover:border-primary/50"
                         }`}
                       >
                         <input
                           type="checkbox"
-                          className="accent-primary flex-shrink-0"
-                          checked={form.hospitals.includes(loc.name)}
+                          className="accent-primary mt-1 flex-shrink-0"
+                          checked={isSelected}
                           onChange={() => toggle("hospitals")(loc.name)}
                         />
-                        <span>
-                          <span className="font-medium text-foreground">{loc.name}</span>
-                          {loc.area && (
-                            <span className="text-muted-foreground text-xs block mt-0.5">{loc.area}</span>
-                          )}
-                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                              <Building2 className="h-4 w-4 text-primary" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-foreground leading-tight">{loc.name}</p>
+                              {cityName && (
+                                <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" /> {cityName}
+                                </p>
+                              )}
+                              {(loc.areas || []).length > 0 && (
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {loc.areas.slice(0, 2).join(", ")}
+                                  {loc.areas.length > 2 && ` +${loc.areas.length - 2} more`}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </label>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-6 text-muted-foreground text-sm border border-dashed border-border rounded-xl">
-                  No hospitals found. Add locations first under Admin → Locations.
+                  {locationsList.length === 0
+                    ? "No hospitals found. Add locations first under Admin → Locations."
+                    : "No hospitals match the selected city filter."}
                 </div>
               )}
 
