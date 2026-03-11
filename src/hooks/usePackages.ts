@@ -39,6 +39,7 @@ export const usePackages = () => {
       const { data, error } = await supabase
         .from("packages")
         .select("*, specialties(name)")
+        .eq("is_published", true)
         .order("created_at");
       if (error) throw error;
       return (data as any[]).map((p) => ({

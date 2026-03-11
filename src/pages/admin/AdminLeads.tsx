@@ -143,7 +143,6 @@ const LeadEditModal = ({ lead, onClose, onSaved }: EditModalProps) => {
           notes: form.notes || null,
           follow_up_date: form.follow_up_date || null,
           lead_type: form.lead_type,
-          updated_at: new Date().toISOString(),
         })
         .eq("id", lead!.id);
       if (error) throw error;

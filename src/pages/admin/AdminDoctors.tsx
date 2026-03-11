@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Search } from "lucide-react";
@@ -33,6 +34,18 @@ const AdminDoctors = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-doctors"] });
       queryClient.invalidateQueries({ queryKey: ["doctors"] });
       toast({ title: "Doctor deleted" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async ({ id, is_published }: { id: string; is_published: boolean }) => {
+      const { error } = await supabase.from("doctors").update({ is_published }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-doctors"] });
+      queryClient.invalidateQueries({ queryKey: ["doctors"] });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -67,6 +80,7 @@ const AdminDoctors = () => {
                 <TableHead>Cities</TableHead>
                 <TableHead>Fee</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Published</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -79,6 +93,12 @@ const AdminDoctors = () => {
                   <TableCell>{(d.cities || []).join(", ")}</TableCell>
                   <TableCell>{d.consultation_fee}</TableCell>
                   <TableCell><StatusBadge status={d.status || "DRAFT"} /></TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={!!d.is_published}
+                      onCheckedChange={(checked) => toggleMutation.mutate({ id: d.id, is_published: checked })}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
                       <Button size="icon" variant="ghost" onClick={() => navigate(`/admin/doctors/${d.id}/edit`)}>
@@ -93,7 +113,7 @@ const AdminDoctors = () => {
               ))}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No doctors found</TableCell>
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">No doctors found</TableCell>
                 </TableRow>
               )}
             </TableBody>

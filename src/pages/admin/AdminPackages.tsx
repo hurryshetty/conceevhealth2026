@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Search } from "lucide-react";
@@ -45,6 +46,18 @@ const AdminPackages = () => {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const toggleMutation = useMutation({
+    mutationFn: async ({ id, is_published }: { id: string; is_published: boolean }) => {
+      const { error } = await supabase.from("packages").update({ is_published }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-packages"] });
+      queryClient.invalidateQueries({ queryKey: ["packages"] });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   const filtered = packages.filter((p) =>
     p.title.toLowerCase().includes(search.toLowerCase()) ||
     (p.specialties?.name ?? "").toLowerCase().includes(search.toLowerCase())
@@ -77,6 +90,7 @@ const AdminPackages = () => {
                 <TableHead>Price</TableHead>
                 <TableHead>Cities</TableHead>
                 <TableHead>Features</TableHead>
+                <TableHead>Published</TableHead>
                 <TableHead className="w-[80px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -91,6 +105,12 @@ const AdminPackages = () => {
                     {(pkg.features ?? []).length} feature{(pkg.features ?? []).length !== 1 ? "s" : ""}
                   </TableCell>
                   <TableCell>
+                    <Switch
+                      checked={!!pkg.is_published}
+                      onCheckedChange={(checked) => toggleMutation.mutate({ id: pkg.id, is_published: checked })}
+                    />
+                  </TableCell>
+                  <TableCell>
                     <div className="flex gap-1">
                       <Button size="icon" variant="ghost" onClick={() => navigate(`/admin/packages/${pkg.id}/edit`)}><Pencil className="h-4 w-4" /></Button>
                       <Button size="icon" variant="ghost" className="text-destructive" onClick={() => deleteMutation.mutate(pkg.id)}><Trash2 className="h-4 w-4" /></Button>
@@ -100,7 +120,7 @@ const AdminPackages = () => {
               ))}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">No packages found</TableCell>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No packages found</TableCell>
                 </TableRow>
               )}
             </TableBody>

@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Search, MapPin, Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { StatusBadge } from "./AdminVerification";
 import { useCountries, useStates, useCities, useAreas } from "@/hooks/useLocations";
 import { cn } from "@/lib/utils";
@@ -175,6 +176,18 @@ const AdminLocations = () => {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const toggleMutation = useMutation({
+    mutationFn: async ({ id, is_published }: { id: string; is_published: boolean }) => {
+      const { error } = await supabase.from("locations").update({ is_published }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-locations"] });
+      queryClient.invalidateQueries({ queryKey: ["locations"] });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   const openCreate = () => { setEditId(null); setForm(emptyForm); setDialogOpen(true); };
 
   const openEdit = async (l: any) => {
@@ -238,6 +251,7 @@ const AdminLocations = () => {
                 <TableHead>City</TableHead>
                 <TableHead>Surgeries</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Published</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -265,6 +279,12 @@ const AdminLocations = () => {
                   <TableCell className="max-w-[200px] truncate">{(l.surgeries || []).join(", ")}</TableCell>
                   <TableCell><StatusBadge status={l.status || "DRAFT"} /></TableCell>
                   <TableCell>
+                    <Switch
+                      checked={!!l.is_published}
+                      onCheckedChange={(checked) => toggleMutation.mutate({ id: l.id, is_published: checked })}
+                    />
+                  </TableCell>
+                  <TableCell>
                     <div className="flex gap-1">
                       <Button size="icon" variant="ghost" onClick={() => openEdit(l)}><Pencil className="h-4 w-4" /></Button>
                       <Button size="icon" variant="ghost" className="text-destructive" onClick={() => deleteMutation.mutate(l.id)}><Trash2 className="h-4 w-4" /></Button>
@@ -274,7 +294,7 @@ const AdminLocations = () => {
               ))}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">No hospitals found</TableCell>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No hospitals found</TableCell>
                 </TableRow>
               )}
             </TableBody>
