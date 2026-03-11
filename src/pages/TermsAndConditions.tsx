@@ -335,36 +335,10 @@ const TermsAndConditions = () => {
 
       {/* ── Body ─────────────────────────────────────────────────────────── */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12 lg:py-16">
-        <div className="grid lg:grid-cols-[240px_1fr] gap-12 items-start">
-
-          {/* Sticky sidebar TOC */}
-          <aside className="hidden lg:block sticky top-24">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-              Contents
-            </p>
-            <nav className="space-y-1">
-              {sections.map((s) => (
-                <a
-                  key={s.id}
-                  href={`#${s.id}`}
-                  className="block text-sm text-muted-foreground hover:text-primary transition-colors py-0.5 leading-snug"
-                >
-                  {s.title}
-                </a>
-              ))}
-              <a
-                href="#contact"
-                className="block text-sm text-muted-foreground hover:text-primary transition-colors py-0.5 leading-snug"
-              >
-                18. Contact Information
-              </a>
-            </nav>
-          </aside>
-
           {/* Main content */}
           <article className="prose prose-slate max-w-none
             prose-headings:font-serif prose-headings:text-foreground
-            prose-h2:text-2xl prose-h2:font-bold prose-h2:mt-10 prose-h2:mb-4 prose-h2:border-b prose-h2:border-border prose-h2:pb-2
+            prose-h2:text-xl prose-h2:font-semibold prose-h2:mt-8 prose-h2:mb-3 prose-h2:border-b prose-h2:border-border prose-h2:pb-2
             prose-p:text-muted-foreground prose-p:leading-relaxed prose-p:my-3
             prose-ul:text-muted-foreground prose-ul:my-3 prose-ul:space-y-1
             prose-li:leading-relaxed
@@ -412,7 +386,6 @@ const TermsAndConditions = () => {
             </section>
 
           </article>
-        </div>
       </div>
 
       <Footer />

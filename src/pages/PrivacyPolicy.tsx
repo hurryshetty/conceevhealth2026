@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Shield, Mail, Phone, Globe, ChevronRight } from "lucide-react";
+import { Shield, Mail, Globe, ChevronRight } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
@@ -52,7 +52,7 @@ const sections = [
       <>
         <p>We may collect the following types of information.</p>
 
-        <h3>3.1 Personal Information</h3>
+        <h2>3.1 Personal Information</h2>
         <p>Information that identifies you as an individual. Examples include:</p>
         <ul>
           <li>Name</li>
@@ -64,7 +64,7 @@ const sections = [
           <li>Address</li>
         </ul>
 
-        <h3>3.2 Health-Related Information (Sensitive Personal Data)</h3>
+        <h2>3.2 Health-Related Information (Sensitive Personal Data)</h2>
         <p>
           Since Conceev Health facilitates medical treatments and surgical packages, we may collect health-related
           information including:
@@ -78,7 +78,7 @@ const sections = [
         </ul>
         <p>This information is collected only to help connect you with the appropriate healthcare provider.</p>
 
-        <h3>3.3 Technical Information</h3>
+        <h2>3.3 Technical Information</h2>
         <p>When you use our website, we may automatically collect:</p>
         <ul>
           <li>IP address</li>
@@ -90,7 +90,7 @@ const sections = [
           <li>Website interaction data</li>
         </ul>
 
-        <h3>3.4 Communication Data</h3>
+        <h2>3.4 Communication Data</h2>
         <p>Information collected through:</p>
         <ul>
           <li>Enquiry forms</li>
@@ -109,7 +109,7 @@ const sections = [
       <>
         <p>We use the information collected for the following purposes.</p>
 
-        <h3>4.1 Service Delivery</h3>
+        <h2>4.1 Service Delivery</h2>
         <ul>
           <li>Connect patients with relevant hospitals and doctors</li>
           <li>Facilitate consultation or surgery bookings</li>
@@ -117,7 +117,7 @@ const sections = [
           <li>Provide curated surgical packages</li>
         </ul>
 
-        <h3>4.2 Communication</h3>
+        <h2>4.2 Communication</h2>
         <p>We may contact you to:</p>
         <ul>
           <li>Respond to enquiries</li>
@@ -127,7 +127,7 @@ const sections = [
           <li>Update you regarding healthcare services</li>
         </ul>
 
-        <h3>4.3 Platform Improvement</h3>
+        <h2>4.3 Platform Improvement</h2>
         <p>Information may be used to:</p>
         <ul>
           <li>Improve website functionality</li>
@@ -136,7 +136,7 @@ const sections = [
           <li>Develop better healthcare services</li>
         </ul>
 
-        <h3>4.4 Marketing &amp; Updates</h3>
+        <h2>4.4 Marketing &amp; Updates</h2>
         <p>We may send:</p>
         <ul>
           <li>Healthcare awareness information</li>
@@ -155,19 +155,19 @@ const sections = [
       <>
         <p>Conceev Health may share your information with trusted partners only when necessary to deliver services.</p>
 
-        <h3>5.1 Hospitals and Doctors</h3>
+        <h2>5.1 Hospitals and Doctors</h2>
         <p>Your enquiry information may be shared with partnered hospitals, healthcare providers, and medical specialists to review your case, provide consultation, and coordinate treatment.</p>
 
-        <h3>5.2 Patient Coordinators</h3>
+        <h2>5.2 Patient Coordinators</h2>
         <p>Conceev Health Patient Coordinators may access your information to assist you in treatment selection, coordinate between hospital and patient, and guide you throughout the process.</p>
 
-        <h3>5.3 Diagnostic &amp; Healthcare Service Partners</h3>
+        <h2>5.3 Diagnostic &amp; Healthcare Service Partners</h2>
         <p>We may share information with diagnostic centers, labs, and treatment partners only when required for healthcare facilitation.</p>
 
-        <h3>5.4 Payment or Financing Partners</h3>
+        <h2>5.4 Payment or Financing Partners</h2>
         <p>If you opt for financing or payment assistance, information may be shared with payment gateways, EMI providers, and insurance partners.</p>
 
-        <h3>5.5 Legal Authorities</h3>
+        <h2>5.5 Legal Authorities</h2>
         <p>We may disclose information if required by law, by government authorities, or to protect legal rights.</p>
       </>
     ),
@@ -324,37 +324,10 @@ const PrivacyPolicy = () => {
 
       {/* ── Body ─────────────────────────────────────────────────────────── */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12 lg:py-16">
-        <div className="grid lg:grid-cols-[240px_1fr] gap-12 items-start">
-
-          {/* Sticky sidebar TOC */}
-          <aside className="hidden lg:block sticky top-24">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-              Contents
-            </p>
-            <nav className="space-y-1">
-              {sections.map((s) => (
-                <a
-                  key={s.id}
-                  href={`#${s.id}`}
-                  className="block text-sm text-muted-foreground hover:text-primary transition-colors py-0.5 leading-snug"
-                >
-                  {s.title}
-                </a>
-              ))}
-              <a
-                href="#contact"
-                className="block text-sm text-muted-foreground hover:text-primary transition-colors py-0.5 leading-snug"
-              >
-                14. Contact Us
-              </a>
-            </nav>
-          </aside>
-
           {/* Main content */}
           <article className="prose prose-slate max-w-none
             prose-headings:font-serif prose-headings:text-foreground
-            prose-h2:text-2xl prose-h2:font-bold prose-h2:mt-10 prose-h2:mb-4 prose-h2:border-b prose-h2:border-border prose-h2:pb-2
-            prose-h3:text-base prose-h3:font-semibold prose-h3:text-foreground prose-h3:mt-6 prose-h3:mb-2
+            prose-h2:text-xl prose-h2:font-semibold prose-h2:mt-8 prose-h2:mb-3 prose-h2:border-b prose-h2:border-border prose-h2:pb-2
             prose-p:text-muted-foreground prose-p:leading-relaxed prose-p:my-3
             prose-ul:text-muted-foreground prose-ul:my-3 prose-ul:space-y-1
             prose-li:leading-relaxed
@@ -403,7 +376,6 @@ const PrivacyPolicy = () => {
             </section>
 
           </article>
-        </div>
       </div>
 
       <Footer />
