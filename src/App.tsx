@@ -25,6 +25,7 @@ import Careers from "./pages/Careers";
 import ContactUs from "./pages/ContactUs";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsAndConditions from "./pages/TermsAndConditions";
+import MedicalDisclaimer from "./pages/MedicalDisclaimer";
 
 // Admin
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -102,6 +103,7 @@ const App = () => (
           <Route path="/contact-us" element={<ContactUs />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+          <Route path="/medical-disclaimer" element={<MedicalDisclaimer />} />
           <Route path="/register-your-hospital" element={<HospitalPartnership />} />
           <Route path="/register-as-doctor" element={<DoctorPartnership />} />
 
