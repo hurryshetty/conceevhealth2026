@@ -65,7 +65,7 @@ const Footer = () => (
       </div>
 
       <div className="border-t border-primary-foreground/10 mt-6 pt-6 text-center text-xs text-primary-foreground/40">
-        © 2026 Conceev Health. All rights reserved. · <a href="#" className="hover:text-primary-foreground">Privacy Policy</a> · <a href="#" className="hover:text-primary-foreground">Terms</a>
+        © 2026 Conceev Health. All rights reserved. · <Link to="/privacy-policy" className="hover:text-primary-foreground">Privacy Policy</Link> · <a href="#" className="hover:text-primary-foreground">Terms</a>
       </div>
     </div>
   </footer>
