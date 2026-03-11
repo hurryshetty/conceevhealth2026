@@ -26,6 +26,7 @@ import ContactUs from "./pages/ContactUs";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsAndConditions from "./pages/TermsAndConditions";
 import MedicalDisclaimer from "./pages/MedicalDisclaimer";
+import RefundPolicy from "./pages/RefundPolicy";
 
 // Admin
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -104,6 +105,7 @@ const App = () => (
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
           <Route path="/medical-disclaimer" element={<MedicalDisclaimer />} />
+          <Route path="/refund-policy" element={<RefundPolicy />} />
           <Route path="/register-your-hospital" element={<HospitalPartnership />} />
           <Route path="/register-as-doctor" element={<DoctorPartnership />} />
 
