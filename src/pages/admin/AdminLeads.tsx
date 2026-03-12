@@ -1,5 +1,4 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -296,8 +295,6 @@ const LeadEditModal = ({ lead, onClose, onSaved }: EditModalProps) => {
 const AdminLeads = () => {
   const { toast } = useToast();
   const qc = useQueryClient();
-  const navigate = useNavigate();
-
   // Filters
   const [activeTab, setActiveTab] = useState<LeadType | "all">("all");
   const [search, setSearch] = useState("");
@@ -355,13 +352,12 @@ const AdminLeads = () => {
         procedure_interest: lead.procedure_interest,
       };
 
-      const { caseId, caseCode } = await convertLeadToCase(leadForConversion, session.user.id);
+      const { caseCode } = await convertLeadToCase(leadForConversion, session.user.id);
       qc.invalidateQueries({ queryKey: ["admin-leads"] });
       toast({
         title: "Case created",
-        description: `${caseCode} created for ${lead.name}.`,
+        description: `${caseCode} created for ${lead.name}. Coordinator can now manage it from the Cases portal.`,
       });
-      navigate(`/coordinator/cases/${caseId}`);
     } catch (e: any) {
       toast({ title: "Conversion failed", description: e.message, variant: "destructive" });
     } finally {
