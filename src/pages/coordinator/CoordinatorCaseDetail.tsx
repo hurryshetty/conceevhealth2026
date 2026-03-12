@@ -115,7 +115,7 @@ const CoordinatorCaseDetail = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_cases")
-        .select("*, specialties(name), locations!hospital_id(name, city), doctors!doctor_id(name, specialty)")
+        .select("*, specialties(name)")
         .eq("id", id!)
         .single();
       if (error) throw error;
@@ -330,6 +330,10 @@ const CoordinatorCaseDetail = () => {
   const stageLabel = CASE_STAGES.find((s) => s.value === caseData.case_stage)?.label ?? caseData.case_stage;
   const completedTasks = (tasks as any[]).filter((t) => t.status === "completed").length;
 
+  // Derive names from already-fetched lists (avoids FK join issues)
+  const assignedHospital = (hospitals as any[]).find((h) => h.id === caseData.hospital_id);
+  const assignedDoctor = (doctors as any[]).find((d) => d.id === caseData.doctor_id);
+
   return (
     <div>
       {/* Back */}
@@ -427,11 +431,11 @@ const CoordinatorCaseDetail = () => {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground mb-0.5">Hospital</p>
-                <p className="font-medium">{(caseData as any).locations?.name ?? "—"}</p>
+                <p className="font-medium">{assignedHospital?.name ?? "—"}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground mb-0.5">Doctor</p>
-                <p className="font-medium">{(caseData as any).doctors?.name ?? "—"}</p>
+                <p className="font-medium">{assignedDoctor?.name ?? "—"}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground mb-0.5">Estimated Cost</p>

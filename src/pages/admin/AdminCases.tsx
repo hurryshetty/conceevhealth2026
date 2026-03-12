@@ -61,7 +61,7 @@ const AdminCases = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_cases")
-        .select("id, title, case_code, case_stage, priority, created_at, specialties(name), locations!hospital_id(name)")
+        .select("id, title, case_code, case_stage, priority, created_at, specialties(name)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as any[];
@@ -190,7 +190,6 @@ const AdminCases = () => {
                   <p className="text-sm font-medium text-foreground truncate">{c.title}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {c.specialties?.name}
-                    {c.locations?.name && ` • ${c.locations.name}`}
                   </p>
                 </div>
                 <div className="flex items-center gap-3 ml-4 shrink-0">
