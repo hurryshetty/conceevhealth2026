@@ -142,10 +142,9 @@ const CoordinatorCaseDetail = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("locations")
-        .select("id, name, city, is_published")
+        .select("id, name, is_published")
         .order("name");
       if (error) console.error("locations query error:", error);
-      // Only show published hospitals; filter client-side in case is_published is null
       return (data ?? []).filter((h: any) => h.is_published === true);
     },
   });
@@ -587,7 +586,7 @@ const CoordinatorCaseDetail = () => {
                 <SelectContent>
                   {(hospitals as any[]).map((h) => (
                     <SelectItem key={h.id} value={h.id}>
-                      {h.name}{h.city ? ` — ${h.city}` : ""}
+                      {h.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
