@@ -66,7 +66,7 @@ const CoordinatorCases = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_cases")
-        .select("*, specialties(name), locations(name), profiles!patient_id(full_name)")
+        .select("*, specialties(name), locations(name)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -102,7 +102,6 @@ const CoordinatorCases = () => {
         priority: f.priority,
         patient_id: session.session!.user.id,
         coordinator_id: session.session!.user.id,
-        case_number: "",
       });
       if (error) throw error;
     },
@@ -183,7 +182,6 @@ const CoordinatorCases = () => {
                   </div>
                   <p className="text-sm font-medium text-foreground">{c.title}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {c.profiles?.full_name && `Patient: ${c.profiles.full_name} • `}
                     {c.specialties?.name}
                     {c.locations?.name ? ` • ${c.locations.name}` : ""}
                   </p>

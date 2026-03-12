@@ -37,7 +37,6 @@ const PatientNewCase = () => {
         description: form.description,
         specialty_id: form.specialty_id || null,
         patient_id: user!.id,
-        case_number: "",
       });
       if (error) throw error;
     },

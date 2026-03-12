@@ -110,7 +110,7 @@ const CoordinatorCaseDetail = () => {
 
   // ── Data queries ─────────────────────────────────────────────────────────
 
-  const { data: caseData, isLoading } = useQuery({
+  const { data: caseData, isLoading, isError, error } = useQuery({
     queryKey: ["case-detail", id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -311,6 +311,15 @@ const CoordinatorCaseDetail = () => {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (isError) {
+    return (
+      <div className="py-10 text-center space-y-2">
+        <p className="text-destructive font-medium">Failed to load case</p>
+        <p className="text-sm text-muted-foreground">{(error as any)?.message ?? "Unknown error"}</p>
+        <p className="text-xs text-muted-foreground">Case ID: {id}</p>
       </div>
     );
   }
