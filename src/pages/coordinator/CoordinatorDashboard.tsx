@@ -42,7 +42,7 @@ const CoordinatorDashboard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_cases")
-        .select("*, specialties(name), locations(name)")
+        .select("*, specialties(name)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as any[];
@@ -51,7 +51,7 @@ const CoordinatorDashboard = () => {
   });
 
   // All leads for stats
-  const { data: leadsData } = useQuery({
+  const { data: leadsData = [] } = useQuery({
     queryKey: ["coordinator-dashboard-leads"],
     queryFn: async () => {
       const { data } = await supabase
@@ -145,7 +145,6 @@ const CoordinatorDashboard = () => {
                   <p className="text-sm font-medium text-foreground truncate">{c.title}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {c.specialties?.name}
-                    {c.locations?.name ? ` • ${c.locations.name}` : ""}
                   </p>
                 </div>
                 <ArrowRight className="h-4 w-4 text-muted-foreground ml-4 flex-shrink-0" />
