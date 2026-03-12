@@ -63,6 +63,7 @@ interface DoctorForm {
   hospitals: string[];
   cities: string[];
   languages: string[];
+  user_id: string;
 }
 
 const emptyForm: DoctorForm = {
@@ -70,6 +71,7 @@ const emptyForm: DoctorForm = {
   bio: "", consultation_fee: "",
   qualifications: [], specializations: [], surgeries: [],
   hospitals: [], cities: [], languages: [],
+  user_id: "",
 };
 
 // ─── Searchable Combobox ───────────────────────────────────────────────────────
@@ -323,6 +325,7 @@ const AdminDoctorForm = () => {
         hospitals: Array.isArray(existing.hospitals) ? existing.hospitals : [],
         cities: Array.isArray(existing.cities) ? existing.cities : [],
         languages: Array.isArray(existing.languages) ? existing.languages : [],
+        user_id: existing.user_id ?? "",
       });
     }
   }, [existing]);
@@ -331,7 +334,7 @@ const AdminDoctorForm = () => {
 
   const saveMutation = useMutation({
     mutationFn: async (f: DoctorForm) => {
-      const payload = {
+      const payload: Record<string, any> = {
         slug: f.slug,
         name: f.name,
         designation: f.designation,
@@ -345,6 +348,7 @@ const AdminDoctorForm = () => {
         hospitals: f.hospitals,
         cities: f.cities,
         languages: f.languages,
+        user_id: f.user_id || null,
       };
       if (isEdit) {
         const { error } = await supabase.from("doctors").update(payload).eq("id", id!);
@@ -431,6 +435,12 @@ const AdminDoctorForm = () => {
                 <div className="space-y-2">
                   <Label>Slug *</Label>
                   <Input required value={form.slug} onChange={(e) => set("slug", e.target.value)} placeholder="dr-priya-sharma" />
+                </div>
+
+                {/* Linked User */}
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Linked User ID <span className="text-muted-foreground font-normal">(optional — paste the doctor's auth user UUID to enable Doctor Portal)</span></Label>
+                  <Input value={form.user_id} onChange={(e) => set("user_id", e.target.value)} placeholder="e.g. 659abd19-4984-4b3c-acdd-a700775b2e3a" />
                 </div>
 
                 {/* Designation */}
