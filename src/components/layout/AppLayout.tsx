@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { NotificationBell } from "@/components/NotificationBell";
 import { LogOut, Menu, X, Heart } from "lucide-react";
 
 export interface NavItem {
@@ -89,7 +90,10 @@ const AppLayout = ({ nav, roleLabel, roleIcon: RoleIcon, loginPath = "/login" }:
         </nav>
 
         <div className="p-3 border-t border-border">
-          <div className="text-xs text-muted-foreground truncate mb-2 px-3">{user?.email}</div>
+          <div className="flex items-center gap-2 mb-2 px-3">
+            <div className="text-xs text-muted-foreground truncate flex-1">{user?.email}</div>
+            <NotificationBell />
+          </div>
           <Button
             variant="ghost"
             size="sm"
@@ -117,6 +121,8 @@ const AppLayout = ({ nav, roleLabel, roleIcon: RoleIcon, loginPath = "/login" }:
             <span className="font-serif font-bold text-foreground">Conceev</span>
             <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{roleLabel}</span>
           </div>
+          <div className="flex-1" />
+          <NotificationBell />
         </header>
 
         <main className="flex-1 overflow-auto">

@@ -3,6 +3,7 @@ import { Outlet, useNavigate } from "react-router-dom";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { useAdmin } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
+import { NotificationBell } from "@/components/NotificationBell";
 import { LogIn, LogOut, Menu } from "lucide-react";
 
 const AdminLayout = () => {
@@ -33,6 +34,7 @@ const AdminLayout = () => {
           <div className="flex-1" />
           {user ? (
             <>
+              <NotificationBell />
               <span className="text-sm text-muted-foreground hidden sm:inline">{user.email}</span>
               <Button variant="outline" size="sm" className="gap-2" onClick={handleLogout}>
                 <LogOut className="h-4 w-4" />

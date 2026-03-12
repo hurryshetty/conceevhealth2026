@@ -13,10 +13,15 @@ import {
   ArrowLeft, Send, Lock, Building2, UserRound, CheckCircle2,
   Circle, Clock, ListTodo, GitBranch, StickyNote, Layers,
   CalendarDays, IndianRupee, AlertTriangle, Plus, Loader2,
+  FileText, Banknote,
 } from "lucide-react";
 import {
   assignCase, updateCaseStage, updateTaskStatus, addTimelineEntry,
 } from "@/lib/caseService";
+import { CaseDocuments } from "@/components/case/CaseDocuments";
+import { CaseAppointments } from "@/components/case/CaseAppointments";
+import { CaseBilling } from "@/components/case/CaseBilling";
+import { CaseSettlements } from "@/components/case/CaseSettlements";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -73,14 +78,18 @@ const TASK_PRIORITY_COLOR: Record<string, string> = {
   critical: "bg-rose-200 text-rose-800 font-bold",
 };
 
-type TabId = "overview" | "assignment" | "tasks" | "timeline" | "notes";
+type TabId = "overview" | "assignment" | "tasks" | "timeline" | "notes" | "documents" | "appointments" | "billing" | "settlements";
 
 const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
-  { id: "overview",   label: "Overview",   icon: Layers },
-  { id: "assignment", label: "Assignment", icon: Building2 },
-  { id: "tasks",      label: "Tasks",      icon: ListTodo },
-  { id: "timeline",   label: "Timeline",   icon: GitBranch },
-  { id: "notes",      label: "Notes",      icon: StickyNote },
+  { id: "overview",     label: "Overview",     icon: Layers },
+  { id: "assignment",   label: "Assignment",   icon: Building2 },
+  { id: "tasks",        label: "Tasks",        icon: ListTodo },
+  { id: "documents",    label: "Documents",    icon: FileText },
+  { id: "appointments", label: "Appointments", icon: CalendarDays },
+  { id: "billing",      label: "Billing",      icon: IndianRupee },
+  { id: "settlements",  label: "Settlements",  icon: Banknote },
+  { id: "timeline",     label: "Timeline",     icon: GitBranch },
+  { id: "notes",        label: "Notes",        icon: StickyNote },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -712,6 +721,18 @@ const CoordinatorCaseDetail = () => {
           )}
         </div>
       )}
+
+      {/* ── Documents Tab ────────────────────────────────────────────────── */}
+      {activeTab === "documents" && <CaseDocuments caseId={id!} />}
+
+      {/* ── Appointments Tab ──────────────────────────────────────────────── */}
+      {activeTab === "appointments" && <CaseAppointments caseId={id!} />}
+
+      {/* ── Billing Tab ───────────────────────────────────────────────────── */}
+      {activeTab === "billing" && <CaseBilling caseId={id!} />}
+
+      {/* ── Settlements Tab ───────────────────────────────────────────────── */}
+      {activeTab === "settlements" && <CaseSettlements caseId={id!} />}
 
       {/* ── Timeline Tab ─────────────────────────────────────────────────── */}
       {activeTab === "timeline" && (
