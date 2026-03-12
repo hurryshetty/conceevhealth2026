@@ -55,12 +55,12 @@ const AdminCases = () => {
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState("all");
 
-  const { data: cases = [], isLoading } = useQuery({
+  const { data: cases = [], isLoading, isError, error } = useQuery({
     queryKey: ["admin-cases-all"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_cases")
-        .select("*, specialties(name), locations(name), doctors(name)")
+        .select("*, specialties(name), locations(name)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as any[];
@@ -153,6 +153,11 @@ const AdminCases = () => {
         {isLoading ? (
           <div className="flex items-center justify-center py-16 gap-2 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" /> Loading cases…
+          </div>
+        ) : isError ? (
+          <div className="py-16 text-center space-y-1">
+            <p className="text-destructive font-medium">Failed to load cases</p>
+            <p className="text-xs text-muted-foreground">{(error as any)?.message ?? "Unknown error"}</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-16 text-center">
