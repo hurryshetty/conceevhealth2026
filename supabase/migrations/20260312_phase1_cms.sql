@@ -39,6 +39,15 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
+-- Ensure columns exist on pre-existing profiles table
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS email       text,
+  ADD COLUMN IF NOT EXISTS phone       text,
+  ADD COLUMN IF NOT EXISTS hospital_id uuid REFERENCES public.locations(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS doctor_id   uuid REFERENCES public.doctors(id)   ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS is_active   boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS updated_at  timestamptz NOT NULL DEFAULT now();
+
 -- Backfill profiles for existing users
 INSERT INTO public.profiles (id, email, role)
 SELECT id, email, COALESCE(raw_app_meta_data->>'role', 'patient')
