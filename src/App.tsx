@@ -51,6 +51,7 @@ import RoleRoute from "./components/auth/RoleRoute";
 // Coordinator
 import CoordinatorLayout from "./pages/coordinator/CoordinatorLayout";
 import CoordinatorDashboard from "./pages/coordinator/CoordinatorDashboard";
+import CoordinatorLeads from "./pages/coordinator/CoordinatorLeads";
 import CoordinatorCases from "./pages/coordinator/CoordinatorCases";
 import CoordinatorCaseDetail from "./pages/coordinator/CoordinatorCaseDetail";
 import CoordinatorMessages from "./pages/coordinator/CoordinatorMessages";
@@ -140,6 +141,7 @@ const App = () => (
             }
           >
             <Route index element={<CoordinatorDashboard />} />
+            <Route path="leads" element={<CoordinatorLeads />} />
             <Route path="cases" element={<CoordinatorCases />} />
             <Route path="cases/:id" element={<CoordinatorCaseDetail />} />
             <Route path="messages" element={<CoordinatorMessages />} />
