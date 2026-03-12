@@ -140,24 +140,25 @@ const CoordinatorCaseDetail = () => {
   const { data: hospitals = [] } = useQuery({
     queryKey: ["locations-list-published"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("locations")
-        .select("id, name, city")
-        .eq("is_published", true)
+        .select("id, name, city, is_published")
         .order("name");
-      return data ?? [];
+      if (error) console.error("locations query error:", error);
+      // Only show published hospitals; filter client-side in case is_published is null
+      return (data ?? []).filter((h: any) => h.is_published === true);
     },
   });
 
   const { data: doctors = [] } = useQuery({
     queryKey: ["doctors-list-published"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("doctors")
-        .select("id, name, designation, hospitals")
-        .eq("is_published", true)
+        .select("id, name, designation, hospitals, is_published")
         .order("name");
-      return data ?? [];
+      if (error) console.error("doctors query error:", error);
+      return (data ?? []).filter((d: any) => d.is_published === true);
     },
   });
 
