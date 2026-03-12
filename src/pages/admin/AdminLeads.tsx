@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -17,8 +18,9 @@ import {
   Search, Trash2, Eye, Pencil, StickyNote, UserCheck,
   Phone, Mail, MapPin, Calendar, Clock, AlertCircle,
   Building2, Stethoscope, Briefcase, Users, ChevronDown,
-  X, CheckCircle2,
+  X, CheckCircle2, FolderPlus,
 } from "lucide-react";
+import { convertLeadToCase, type LeadForConversion } from "@/lib/caseService";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -294,6 +296,7 @@ const LeadEditModal = ({ lead, onClose, onSaved }: EditModalProps) => {
 const AdminLeads = () => {
   const { toast } = useToast();
   const qc = useQueryClient();
+  const navigate = useNavigate();
 
   // Filters
   const [activeTab, setActiveTab] = useState<LeadType | "all">("all");
@@ -334,6 +337,37 @@ const AdminLeads = () => {
     onError: (e: any) =>
       toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
+
+  const [convertingId, setConvertingId] = useState<string | null>(null);
+
+  const handleConvertToCase = async (lead: Lead) => {
+    setConvertingId(lead.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const leadForConversion: LeadForConversion = {
+        id: lead.id,
+        name: lead.name,
+        phone: lead.phone,
+        email: lead.email,
+        city: lead.city,
+        procedure_interest: lead.procedure_interest,
+      };
+
+      const { caseId, caseCode } = await convertLeadToCase(leadForConversion, session.user.id);
+      qc.invalidateQueries({ queryKey: ["admin-leads"] });
+      toast({
+        title: "Case created",
+        description: `${caseCode} created for ${lead.name}.`,
+      });
+      navigate(`/coordinator/cases/${caseId}`);
+    } catch (e: any) {
+      toast({ title: "Conversion failed", description: e.message, variant: "destructive" });
+    } finally {
+      setConvertingId(null);
+    }
+  };
 
   // Tab counts
   const counts = useMemo(() => {
@@ -599,6 +633,17 @@ const AdminLeads = () => {
                     {/* Actions */}
                     <TableCell>
                       <div className="flex items-center gap-1">
+                        {/* Convert to Case — only for patient enquiries not yet converted */}
+                        {lead.lead_type === "patient_enquiry" && lead.crm_status !== "converted" && (
+                          <button
+                            onClick={() => handleConvertToCase(lead)}
+                            disabled={convertingId === lead.id}
+                            title="Convert to Case"
+                            className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 transition-colors disabled:opacity-50"
+                          >
+                            <FolderPlus className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                         <button
                           onClick={() => setEditLead(lead)}
                           title="View / Edit"

@@ -11,18 +11,44 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, ArrowRight } from "lucide-react";
 
-const STATUSES = ["new","assigned","in_progress","awaiting_docs","under_review","approved","rejected","completed","cancelled"];
+const CASE_STAGES = [
+  { value: "case_created",              label: "Case Created" },
+  { value: "assignment_pending",        label: "Assignment Pending" },
+  { value: "assigned",                  label: "Assigned" },
+  { value: "consultation_scheduled",    label: "Consultation Scheduled" },
+  { value: "consultation_completed",    label: "Consultation Completed" },
+  { value: "pre_treatment",             label: "Pre-Treatment" },
+  { value: "treatment_confirmed",       label: "Treatment Confirmed" },
+  { value: "admitted",                  label: "Admitted" },
+  { value: "treatment_in_progress",     label: "Treatment In Progress" },
+  { value: "recovery",                  label: "Recovery" },
+  { value: "discharged",               label: "Discharged" },
+  { value: "followup",                  label: "Follow-Up" },
+  { value: "billing_pending",           label: "Billing Pending" },
+  { value: "closed",                    label: "Closed" },
+  { value: "cancelled",                 label: "Cancelled" },
+  { value: "on_hold",                   label: "On Hold" },
+  { value: "escalated",                 label: "Escalated" },
+];
 
-const STATUS_COLOR: Record<string, string> = {
-  new: "bg-blue-100 text-blue-700",
-  assigned: "bg-purple-100 text-purple-700",
-  in_progress: "bg-yellow-100 text-yellow-700",
-  awaiting_docs: "bg-orange-100 text-orange-700",
-  under_review: "bg-indigo-100 text-indigo-700",
-  approved: "bg-green-100 text-green-700",
-  completed: "bg-emerald-100 text-emerald-700",
-  rejected: "bg-red-100 text-red-700",
-  cancelled: "bg-gray-100 text-gray-600",
+const STAGE_COLOR: Record<string, string> = {
+  case_created:           "bg-blue-100 text-blue-700",
+  assignment_pending:     "bg-orange-100 text-orange-700",
+  assigned:               "bg-purple-100 text-purple-700",
+  consultation_scheduled: "bg-indigo-100 text-indigo-700",
+  consultation_completed: "bg-cyan-100 text-cyan-700",
+  pre_treatment:          "bg-yellow-100 text-yellow-700",
+  treatment_confirmed:    "bg-lime-100 text-lime-700",
+  admitted:               "bg-teal-100 text-teal-700",
+  treatment_in_progress:  "bg-emerald-100 text-emerald-700",
+  recovery:               "bg-green-100 text-green-700",
+  discharged:             "bg-green-200 text-green-800",
+  followup:               "bg-sky-100 text-sky-700",
+  billing_pending:        "bg-amber-100 text-amber-700",
+  closed:                 "bg-gray-200 text-gray-700",
+  cancelled:              "bg-red-100 text-red-700",
+  on_hold:                "bg-zinc-100 text-zinc-700",
+  escalated:              "bg-rose-100 text-rose-700",
 };
 
 const CoordinatorCases = () => {
@@ -40,7 +66,7 @@ const CoordinatorCases = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_cases")
-        .select("*, specialties(name), hospitals(name), profiles!patient_id(full_name)")
+        .select("*, specialties(name), locations(name), profiles!patient_id(full_name)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -90,8 +116,11 @@ const CoordinatorCases = () => {
   });
 
   const filtered = cases.filter((c: any) => {
-    const matchSearch = !search || c.title.toLowerCase().includes(search.toLowerCase()) || c.case_number?.includes(search);
-    const matchStatus = statusFilter === "all" || c.status === statusFilter;
+    const matchSearch =
+      !search ||
+      c.title.toLowerCase().includes(search.toLowerCase()) ||
+      (c.case_code ?? c.case_number ?? "").toLowerCase().includes(search.toLowerCase());
+    const matchStatus = statusFilter === "all" || c.case_stage === statusFilter;
     return matchSearch && matchStatus;
   });
 
@@ -116,13 +145,13 @@ const CoordinatorCases = () => {
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="All statuses" />
+          <SelectTrigger className="w-52">
+            <SelectValue placeholder="All stages" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            {STATUSES.map((s) => (
-              <SelectItem key={s} value={s}>{s.replace("_", " ")}</SelectItem>
+            <SelectItem value="all">All stages</SelectItem>
+            {CASE_STAGES.map((s) => (
+              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -144,9 +173,11 @@ const CoordinatorCases = () => {
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="text-xs font-mono text-muted-foreground">{c.case_number}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[c.status] || "bg-gray-100"}`}>
-                      {c.status.replace("_", " ")}
+                    <span className="text-xs font-mono text-muted-foreground">
+                      {c.case_code || c.case_number || "—"}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STAGE_COLOR[c.case_stage] ?? "bg-gray-100 text-gray-600"}`}>
+                      {CASE_STAGES.find((s) => s.value === c.case_stage)?.label ?? c.case_stage ?? "—"}
                     </span>
                     <span className="text-xs text-muted-foreground capitalize">• {c.priority}</span>
                   </div>
@@ -154,7 +185,7 @@ const CoordinatorCases = () => {
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {c.profiles?.full_name && `Patient: ${c.profiles.full_name} • `}
                     {c.specialties?.name}
-                    {c.hospitals?.name ? ` • ${c.hospitals.name}` : ""}
+                    {c.locations?.name ? ` • ${c.locations.name}` : ""}
                   </p>
                 </div>
                 <ArrowRight className="h-4 w-4 text-muted-foreground ml-4 flex-shrink-0" />

@@ -5,47 +5,173 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Send, Lock } from "lucide-react";
+import {
+  ArrowLeft, Send, Lock, Building2, UserRound, CheckCircle2,
+  Circle, Clock, ListTodo, GitBranch, StickyNote, Layers,
+  CalendarDays, IndianRupee, AlertTriangle, Plus, Loader2,
+} from "lucide-react";
+import {
+  assignCase, updateCaseStage, updateTaskStatus, addTimelineEntry,
+} from "@/lib/caseService";
 
-const STATUSES = ["new","assigned","in_progress","awaiting_docs","under_review","approved","rejected","completed","cancelled"];
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-const STATUS_COLOR: Record<string, string> = {
-  new: "bg-blue-100 text-blue-700",
-  assigned: "bg-purple-100 text-purple-700",
-  in_progress: "bg-yellow-100 text-yellow-700",
-  awaiting_docs: "bg-orange-100 text-orange-700",
-  under_review: "bg-indigo-100 text-indigo-700",
-  approved: "bg-green-100 text-green-700",
-  completed: "bg-emerald-100 text-emerald-700",
-  rejected: "bg-red-100 text-red-700",
-  cancelled: "bg-gray-100 text-gray-600",
+const CASE_STAGES = [
+  { value: "case_created",              label: "Case Created" },
+  { value: "assignment_pending",        label: "Assignment Pending" },
+  { value: "assigned",                  label: "Assigned" },
+  { value: "consultation_scheduled",    label: "Consultation Scheduled" },
+  { value: "consultation_completed",    label: "Consultation Completed" },
+  { value: "pre_treatment",             label: "Pre-Treatment" },
+  { value: "treatment_confirmed",       label: "Treatment Confirmed" },
+  { value: "admitted",                  label: "Admitted" },
+  { value: "treatment_in_progress",     label: "Treatment In Progress" },
+  { value: "recovery",                  label: "Recovery" },
+  { value: "discharged",               label: "Discharged" },
+  { value: "followup",                  label: "Follow-Up" },
+  { value: "billing_pending",           label: "Billing Pending" },
+  { value: "closed",                    label: "Closed" },
+  { value: "cancelled",                 label: "Cancelled" },
+  { value: "on_hold",                   label: "On Hold" },
+  { value: "escalated",                 label: "Escalated" },
+];
+
+const STAGE_COLOR: Record<string, string> = {
+  case_created:           "bg-blue-100 text-blue-700",
+  assignment_pending:     "bg-orange-100 text-orange-700",
+  assigned:               "bg-purple-100 text-purple-700",
+  consultation_scheduled: "bg-indigo-100 text-indigo-700",
+  consultation_completed: "bg-cyan-100 text-cyan-700",
+  pre_treatment:          "bg-yellow-100 text-yellow-700",
+  treatment_confirmed:    "bg-lime-100 text-lime-700",
+  admitted:               "bg-teal-100 text-teal-700",
+  treatment_in_progress:  "bg-emerald-100 text-emerald-700",
+  recovery:               "bg-green-100 text-green-700",
+  discharged:             "bg-green-200 text-green-800",
+  followup:               "bg-sky-100 text-sky-700",
+  billing_pending:        "bg-amber-100 text-amber-700",
+  closed:                 "bg-gray-200 text-gray-700",
+  cancelled:              "bg-red-100 text-red-700",
+  on_hold:                "bg-zinc-100 text-zinc-700",
+  escalated:              "bg-rose-100 text-rose-700",
 };
 
+const TASK_STATUS_CYCLE: Record<string, string> = {
+  pending:     "in_progress",
+  in_progress: "completed",
+  completed:   "pending",
+};
+
+const TASK_PRIORITY_COLOR: Record<string, string> = {
+  low:      "bg-gray-100 text-gray-600",
+  medium:   "bg-yellow-100 text-yellow-700",
+  high:     "bg-red-100 text-red-700",
+  critical: "bg-rose-200 text-rose-800 font-bold",
+};
+
+type TabId = "overview" | "assignment" | "tasks" | "timeline" | "notes";
+
+const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
+  { id: "overview",   label: "Overview",   icon: Layers },
+  { id: "assignment", label: "Assignment", icon: Building2 },
+  { id: "tasks",      label: "Tasks",      icon: ListTodo },
+  { id: "timeline",   label: "Timeline",   icon: GitBranch },
+  { id: "notes",      label: "Notes",      icon: StickyNote },
+];
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 const CoordinatorCaseDetail = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
 
+  const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [noteText, setNoteText] = useState("");
   const [isInternal, setIsInternal] = useState(false);
-  const [newStatus, setNewStatus] = useState("");
+  const [newStage, setNewStage] = useState("");
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [addingTask, setAddingTask] = useState(false);
+
+  // ── Data queries ─────────────────────────────────────────────────────────
 
   const { data: caseData, isLoading } = useQuery({
     queryKey: ["case-detail", id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_cases")
-        .select("*, specialties(name), hospitals(name, city), doctors(name)")
+        .select("*, specialties(name), locations(name, city), doctors(name, specialty)")
         .eq("id", id!)
         .single();
       if (error) throw error;
       return data;
+    },
+  });
+
+  const { data: leadData } = useQuery({
+    queryKey: ["case-lead", caseData?.lead_id],
+    enabled: !!caseData?.lead_id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("leads")
+        .select("name, phone, email, city, procedure_interest, crm_status, created_at")
+        .eq("id", caseData!.lead_id)
+        .single();
+      return data;
+    },
+  });
+
+  const { data: hospitals = [] } = useQuery({
+    queryKey: ["locations-list"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("locations")
+        .select("id, name, city")
+        .eq("is_active", true)
+        .order("name");
+      return data ?? [];
+    },
+  });
+
+  const { data: doctors = [] } = useQuery({
+    queryKey: ["doctors-list"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("doctors")
+        .select("id, name, specialty")
+        .eq("is_active", true)
+        .order("name");
+      return data ?? [];
+    },
+  });
+
+  const { data: tasks = [], refetch: refetchTasks } = useQuery({
+    queryKey: ["case-tasks", id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("case_tasks")
+        .select("*")
+        .eq("case_id", id!)
+        .order("sort_order", { ascending: true });
+      return data ?? [];
+    },
+  });
+
+  const { data: timeline = [] } = useQuery({
+    queryKey: ["case-timeline", id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("case_timeline")
+        .select("*, profiles!performed_by(full_name)")
+        .eq("case_id", id!)
+        .order("created_at", { ascending: false });
+      return data ?? [];
     },
   });
 
@@ -61,20 +187,88 @@ const CoordinatorCaseDetail = () => {
     },
   });
 
-  const { data: hospitals = [] } = useQuery({
-    queryKey: ["hospitals-list"],
-    queryFn: async () => {
-      const { data } = await supabase.from("hospitals").select("id, name, city").eq("is_active", true);
-      return data ?? [];
+  // ── Mutations ────────────────────────────────────────────────────────────
+
+  const stageMutation = useMutation({
+    mutationFn: async (stage: string) => {
+      await updateCaseStage(id!, stage, user!.id);
     },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["case-detail", id] });
+      qc.invalidateQueries({ queryKey: ["case-timeline", id] });
+      toast({ title: "Stage updated" });
+      setNewStage("");
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  const { data: doctors = [] } = useQuery({
-    queryKey: ["doctors-list"],
-    queryFn: async () => {
-      const { data } = await supabase.from("doctors").select("id, name, specialty").eq("is_active", true);
-      return data ?? [];
+  const assignMutation = useMutation({
+    mutationFn: async (assignments: { hospitalId?: string | null; doctorId?: string | null }) => {
+      const hospital = assignments.hospitalId
+        ? hospitals.find((h: any) => h.id === assignments.hospitalId)
+        : undefined;
+      const doctor = assignments.doctorId
+        ? doctors.find((d: any) => d.id === assignments.doctorId)
+        : undefined;
+      await assignCase(
+        id!,
+        assignments,
+        user!.id,
+        hospital?.name,
+        doctor?.name,
+      );
     },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["case-detail", id] });
+      qc.invalidateQueries({ queryKey: ["case-timeline", id] });
+      toast({ title: "Assignment saved" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const costMutation = useMutation({
+    mutationFn: async (cost: number) => {
+      const { error } = await supabase
+        .from("patient_cases")
+        .update({ estimated_package_cost: cost })
+        .eq("id", id!);
+      if (error) throw error;
+      await addTimelineEntry(id!, "cost_updated", `Estimated cost set to ₹${cost.toLocaleString("en-IN")}`, user!.id);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["case-detail", id] });
+      qc.invalidateQueries({ queryKey: ["case-timeline", id] });
+      toast({ title: "Cost updated" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const taskStatusMutation = useMutation({
+    mutationFn: async ({ taskId, status }: { taskId: string; status: string }) => {
+      await updateTaskStatus(taskId, status);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["case-tasks", id] }),
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const addTaskMutation = useMutation({
+    mutationFn: async (title: string) => {
+      const { error } = await supabase.from("case_tasks").insert({
+        case_id: id!,
+        task_title: title,
+        assigned_to: user!.id,
+        priority: "medium",
+        sort_order: tasks.length + 1,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["case-tasks", id] });
+      setNewTaskTitle("");
+      setAddingTask(false);
+      toast({ title: "Task added" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const addNoteMutation = useMutation({
@@ -86,186 +280,541 @@ const CoordinatorCaseDetail = () => {
         is_internal: isInternal,
       });
       if (error) throw error;
+      await addTimelineEntry(
+        id!,
+        "note_added",
+        isInternal ? "Internal note added" : "Note added",
+        user!.id,
+      );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["case-notes", id] });
+      qc.invalidateQueries({ queryKey: ["case-notes", id] });
+      qc.invalidateQueries({ queryKey: ["case-timeline", id] });
       setNoteText("");
       toast({ title: "Note added" });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  const updateMutation = useMutation({
-    mutationFn: async (updates: Record<string, any>) => {
-      const { error } = await supabase.from("patient_cases").update(updates).eq("id", id!);
-      if (error) throw error;
-      if (updates.status) {
-        await supabase.from("case_status_history").insert({
-          case_id: id!,
-          status: updates.status,
-          changed_by: user!.id,
-        });
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["case-detail", id] });
-      toast({ title: "Case updated" });
-      setNewStatus("");
-    },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
-  });
+  // ── Render ───────────────────────────────────────────────────────────────
 
-  if (isLoading) return <p className="text-muted-foreground">Loading...</p>;
-  if (!caseData) return <p className="text-muted-foreground">Case not found</p>;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (!caseData) {
+    return <p className="text-muted-foreground py-10 text-center">Case not found.</p>;
+  }
+
+  const stageLabel = CASE_STAGES.find((s) => s.value === caseData.case_stage)?.label ?? caseData.case_stage;
+  const completedTasks = (tasks as any[]).filter((t) => t.status === "completed").length;
 
   return (
     <div>
-      <Button variant="ghost" onClick={() => navigate("/coordinator/cases")} className="gap-2 mb-6 -ml-2">
+      {/* Back */}
+      <Button variant="ghost" onClick={() => navigate("/coordinator/cases")} className="gap-2 mb-5 -ml-2">
         <ArrowLeft className="h-4 w-4" /> Back to Cases
       </Button>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Left - Case Info */}
-        <div className="lg:col-span-2 space-y-5">
-          <div className="bg-card border border-border rounded-xl p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <p className="text-xs font-mono text-muted-foreground mb-1">{caseData.case_number}</p>
-                <h1 className="font-serif text-2xl font-bold text-foreground">{caseData.title}</h1>
-              </div>
-              <span className={`text-sm px-3 py-1 rounded-full font-medium ${STATUS_COLOR[caseData.status] || ""}`}>
-                {caseData.status.replace("_", " ")}
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
+        <div className="flex-1">
+          <p className="text-xs font-mono text-muted-foreground mb-0.5">
+            {caseData.case_code || caseData.case_number || "—"}
+          </p>
+          <h1 className="font-serif text-2xl font-bold text-foreground leading-tight">{caseData.title}</h1>
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${STAGE_COLOR[caseData.case_stage] ?? "bg-secondary text-muted-foreground"}`}>
+              {stageLabel}
+            </span>
+            {caseData.priority && (
+              <span className="text-xs text-muted-foreground capitalize">Priority: {caseData.priority}</span>
+            )}
+            {caseData.is_escalated && (
+              <span className="inline-flex items-center gap-1 text-xs text-rose-600 font-medium">
+                <AlertTriangle className="h-3.5 w-3.5" /> Escalated
               </span>
+            )}
+          </div>
+        </div>
+        {/* Quick stage update */}
+        <div className="flex items-center gap-2">
+          <Select value={newStage} onValueChange={setNewStage}>
+            <SelectTrigger className="w-[200px] rounded-lg text-sm">
+              <SelectValue placeholder="Change stage…" />
+            </SelectTrigger>
+            <SelectContent>
+              {CASE_STAGES.filter((s) => s.value !== caseData.case_stage).map((s) => (
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            size="sm"
+            disabled={!newStage || stageMutation.isPending}
+            onClick={() => stageMutation.mutate(newStage)}
+            className="rounded-lg"
+          >
+            {stageMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Update"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-0 border-b border-border mb-6 overflow-x-auto">
+        {TABS.map((tab) => {
+          const Icon = tab.icon;
+          const active = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-all whitespace-nowrap -mb-px ${
+                active
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              {tab.label}
+              {tab.id === "tasks" && tasks.length > 0 && (
+                <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-semibold ${
+                  active ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"
+                }`}>
+                  {completedTasks}/{tasks.length}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Overview Tab ──────────────────────────────────────────────────── */}
+      {activeTab === "overview" && (
+        <div className="grid lg:grid-cols-2 gap-5">
+          {/* Case Info */}
+          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+            <h2 className="font-semibold text-foreground">Case Information</h2>
+            <div className="grid grid-cols-2 gap-y-3 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Specialty</p>
+                <p className="font-medium">{(caseData as any).specialties?.name ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Priority</p>
+                <p className="font-medium capitalize">{caseData.priority ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Hospital</p>
+                <p className="font-medium">{(caseData as any).locations?.name ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Doctor</p>
+                <p className="font-medium">{(caseData as any).doctors?.name ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Estimated Cost</p>
+                <p className="font-medium">
+                  {caseData.estimated_package_cost
+                    ? `₹${Number(caseData.estimated_package_cost).toLocaleString("en-IN")}`
+                    : "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Treatment Date</p>
+                <p className="font-medium">
+                  {caseData.expected_treatment_date
+                    ? new Date(caseData.expected_treatment_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+                    : "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Consultation</p>
+                <p className="font-medium capitalize">{caseData.consultation_status ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Payment</p>
+                <p className="font-medium capitalize">{caseData.payment_status ?? "—"}</p>
+              </div>
             </div>
             {caseData.description && (
-              <p className="text-muted-foreground text-sm leading-relaxed">{caseData.description}</p>
+              <div className="pt-3 border-t border-border">
+                <p className="text-xs text-muted-foreground mb-1">Description</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">{caseData.description}</p>
+              </div>
             )}
-            <div className="grid grid-cols-2 gap-3 mt-4 text-sm">
-              <div><span className="text-muted-foreground">Specialty:</span> <span className="font-medium">{caseData.specialties?.name ?? "—"}</span></div>
-              <div><span className="text-muted-foreground">Priority:</span> <span className="font-medium capitalize">{caseData.priority}</span></div>
-              <div><span className="text-muted-foreground">Hospital:</span> <span className="font-medium">{caseData.hospitals?.name ?? "—"}</span></div>
-              <div><span className="text-muted-foreground">Doctor:</span> <span className="font-medium">{caseData.doctors?.name ?? "—"}</span></div>
+            <div className="pt-3 border-t border-border text-xs text-muted-foreground">
+              Created: {new Date(caseData.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
             </div>
           </div>
 
-          {/* Notes */}
-          <div className="bg-card border border-border rounded-xl p-6">
-            <h2 className="font-semibold text-foreground mb-4">Notes & Updates</h2>
-            <div className="space-y-3 mb-4 max-h-72 overflow-y-auto">
-              {notes.length === 0 ? (
-                <p className="text-muted-foreground text-sm">No notes yet</p>
-              ) : (
-                notes.map((note: any) => (
-                  <div key={note.id} className={`p-3 rounded-lg text-sm ${note.is_internal ? "bg-yellow-50 border border-yellow-200" : "bg-accent"}`}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-foreground">{note.profiles?.full_name ?? "Unknown"}</span>
-                      {note.is_internal && <Lock className="h-3 w-3 text-yellow-600" />}
-                      <span className="text-xs text-muted-foreground ml-auto">
-                        {new Date(note.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                      </span>
-                    </div>
-                    <p className="text-muted-foreground">{note.content}</p>
+          {/* Lead Source */}
+          {leadData && (
+            <div className="bg-card border border-border rounded-xl p-6 space-y-3">
+              <h2 className="font-semibold text-foreground">Patient / Lead</h2>
+              <div className="grid grid-cols-2 gap-y-3 text-sm">
+                <div className="col-span-2">
+                  <p className="text-xs text-muted-foreground mb-0.5">Name</p>
+                  <p className="font-medium">{leadData.name}</p>
+                </div>
+                {leadData.phone && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">Phone</p>
+                    <a href={`tel:${leadData.phone}`} className="font-medium text-primary hover:underline">{leadData.phone}</a>
                   </div>
-                ))
-              )}
+                )}
+                {leadData.email && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">Email</p>
+                    <a href={`mailto:${leadData.email}`} className="font-medium text-primary hover:underline truncate block">{leadData.email}</a>
+                  </div>
+                )}
+                {leadData.city && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">City</p>
+                    <p className="font-medium">{leadData.city}</p>
+                  </div>
+                )}
+                {leadData.procedure_interest && (
+                  <div className="col-span-2">
+                    <p className="text-xs text-muted-foreground mb-0.5">Procedure Interest</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{leadData.procedure_interest}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Task Summary */}
+          <div className="bg-card border border-border rounded-xl p-6 lg:col-span-2">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-foreground">Task Progress</h2>
+              <span className="text-sm text-muted-foreground">{completedTasks} / {tasks.length} completed</span>
+            </div>
+            <div className="w-full bg-secondary rounded-full h-2 mb-4">
+              <div
+                className="bg-primary h-2 rounded-full transition-all"
+                style={{ width: tasks.length ? `${(completedTasks / tasks.length) * 100}%` : "0%" }}
+              />
             </div>
             <div className="space-y-2">
-              <Textarea
-                placeholder="Add a note..."
-                value={noteText}
-                onChange={(e) => setNoteText(e.target.value)}
-                rows={3}
-              />
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
-                  <input type="checkbox" checked={isInternal} onChange={(e) => setIsInternal(e.target.checked)} className="rounded" />
-                  Internal note (not visible to patient)
-                </label>
-                <Button
-                  size="sm"
-                  onClick={() => addNoteMutation.mutate()}
-                  disabled={!noteText.trim() || addNoteMutation.isPending}
-                  className="gap-2"
-                >
-                  <Send className="h-3.5 w-3.5" /> Add Note
-                </Button>
-              </div>
+              {(tasks as any[]).slice(0, 5).map((task) => (
+                <div key={task.id} className="flex items-center gap-2 text-sm">
+                  {task.status === "completed"
+                    ? <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                    : task.status === "in_progress"
+                    ? <Clock className="h-4 w-4 text-yellow-500 shrink-0" />
+                    : <Circle className="h-4 w-4 text-muted-foreground/40 shrink-0" />}
+                  <span className={task.status === "completed" ? "line-through text-muted-foreground" : "text-foreground"}>
+                    {task.task_title}
+                  </span>
+                </div>
+              ))}
+              {tasks.length > 5 && (
+                <button onClick={() => setActiveTab("tasks")} className="text-xs text-primary hover:underline mt-1">
+                  View all {tasks.length} tasks →
+                </button>
+              )}
             </div>
           </div>
         </div>
+      )}
 
-        {/* Right - Actions */}
-        <div className="space-y-5">
-          {/* Update Status */}
+      {/* ── Assignment Tab ────────────────────────────────────────────────── */}
+      {activeTab === "assignment" && (
+        <div className="grid sm:grid-cols-2 gap-5 max-w-2xl">
+          {/* Hospital */}
           <div className="bg-card border border-border rounded-xl p-5">
-            <h3 className="font-semibold text-foreground mb-3">Update Status</h3>
-            <Select value={newStatus} onValueChange={setNewStatus}>
-              <SelectTrigger><SelectValue placeholder="Change status..." /></SelectTrigger>
+            <div className="flex items-center gap-2 mb-3">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              <h3 className="font-semibold text-foreground">Hospital</h3>
+            </div>
+            {(caseData as any).locations && (
+              <p className="text-xs text-muted-foreground mb-2">
+                Current: <span className="font-medium text-foreground">{(caseData as any).locations.name}</span>
+              </p>
+            )}
+            <Select
+              defaultValue={caseData.hospital_id ?? ""}
+              onValueChange={(v) => assignMutation.mutate({ hospitalId: v })}
+            >
+              <SelectTrigger className="rounded-lg text-sm">
+                <SelectValue placeholder="Select hospital…" />
+              </SelectTrigger>
               <SelectContent>
-                {STATUSES.filter((s) => s !== caseData.status).map((s) => (
-                  <SelectItem key={s} value={s}>{s.replace("_", " ")}</SelectItem>
+                {(hospitals as any[]).map((h) => (
+                  <SelectItem key={h.id} value={h.id}>
+                    {h.name}{h.city ? ` — ${h.city}` : ""}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Button
-              className="w-full mt-3"
-              disabled={!newStatus || updateMutation.isPending}
-              onClick={() => updateMutation.mutate({ status: newStatus })}
-            >
-              Update Status
-            </Button>
+            {assignMutation.isPending && <p className="text-xs text-muted-foreground mt-1">Saving…</p>}
           </div>
 
-          {/* Assign Hospital */}
+          {/* Doctor */}
           <div className="bg-card border border-border rounded-xl p-5">
-            <h3 className="font-semibold text-foreground mb-3">Assign Hospital</h3>
+            <div className="flex items-center gap-2 mb-3">
+              <UserRound className="h-4 w-4 text-muted-foreground" />
+              <h3 className="font-semibold text-foreground">Doctor</h3>
+            </div>
+            {(caseData as any).doctors && (
+              <p className="text-xs text-muted-foreground mb-2">
+                Current: <span className="font-medium text-foreground">{(caseData as any).doctors.name}</span>
+              </p>
+            )}
             <Select
-              value={caseData.hospital_id ?? ""}
-              onValueChange={(v) => updateMutation.mutate({ hospital_id: v })}
+              defaultValue={caseData.doctor_id ?? ""}
+              onValueChange={(v) => assignMutation.mutate({ doctorId: v })}
             >
-              <SelectTrigger><SelectValue placeholder="Select hospital..." /></SelectTrigger>
+              <SelectTrigger className="rounded-lg text-sm">
+                <SelectValue placeholder="Select doctor…" />
+              </SelectTrigger>
               <SelectContent>
-                {hospitals.map((h: any) => (
-                  <SelectItem key={h.id} value={h.id}>{h.name} — {h.city}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Assign Doctor */}
-          <div className="bg-card border border-border rounded-xl p-5">
-            <h3 className="font-semibold text-foreground mb-3">Assign Doctor</h3>
-            <Select
-              value={caseData.doctor_id ?? ""}
-              onValueChange={(v) => updateMutation.mutate({ doctor_id: v })}
-            >
-              <SelectTrigger><SelectValue placeholder="Select doctor..." /></SelectTrigger>
-              <SelectContent>
-                {doctors.map((d: any) => (
-                  <SelectItem key={d.id} value={d.id}>{d.name} — {d.specialty}</SelectItem>
+                {(doctors as any[]).map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.name}{d.specialty ? ` — ${d.specialty}` : ""}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
           {/* Estimated Cost */}
-          <div className="bg-card border border-border rounded-xl p-5">
-            <h3 className="font-semibold text-foreground mb-3">Estimated Cost (INR)</h3>
+          <div className="bg-card border border-border rounded-xl p-5 sm:col-span-2">
+            <div className="flex items-center gap-2 mb-3">
+              <IndianRupee className="h-4 w-4 text-muted-foreground" />
+              <h3 className="font-semibold text-foreground">Estimated Package Cost (INR)</h3>
+            </div>
             <div className="flex gap-2">
-              <input
+              <Input
                 type="number"
-                defaultValue={caseData.estimated_cost ?? ""}
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                defaultValue={caseData.estimated_package_cost ?? ""}
+                placeholder="0.00"
+                className="rounded-lg text-sm"
                 onBlur={(e) => {
                   const val = parseFloat(e.target.value);
-                  if (!isNaN(val)) updateMutation.mutate({ estimated_cost: val });
+                  if (!isNaN(val) && val !== caseData.estimated_package_cost) {
+                    costMutation.mutate(val);
+                  }
                 }}
-                placeholder="0.00"
               />
+              {costMutation.isPending && <Loader2 className="h-4 w-4 animate-spin self-center text-muted-foreground" />}
+            </div>
+          </div>
+
+          {/* Expected Treatment Date */}
+          <div className="bg-card border border-border rounded-xl p-5 sm:col-span-2">
+            <div className="flex items-center gap-2 mb-3">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              <h3 className="font-semibold text-foreground">Expected Treatment Date</h3>
+            </div>
+            <Input
+              type="date"
+              defaultValue={caseData.expected_treatment_date ?? ""}
+              className="rounded-lg text-sm max-w-xs"
+              onBlur={(e) => {
+                const val = e.target.value;
+                if (val && val !== caseData.expected_treatment_date) {
+                  supabase
+                    .from("patient_cases")
+                    .update({ expected_treatment_date: val })
+                    .eq("id", id!)
+                    .then(({ error }) => {
+                      if (error) {
+                        toast({ title: "Error", description: error.message, variant: "destructive" });
+                      } else {
+                        qc.invalidateQueries({ queryKey: ["case-detail", id] });
+                        toast({ title: "Treatment date updated" });
+                      }
+                    });
+                }
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── Tasks Tab ────────────────────────────────────────────────────── */}
+      {activeTab === "tasks" && (
+        <div className="max-w-2xl space-y-3">
+          {(tasks as any[]).map((task) => (
+            <div key={task.id} className="bg-card border border-border rounded-xl p-4 flex items-start gap-3">
+              <button
+                onClick={() => taskStatusMutation.mutate({ taskId: task.id, status: TASK_STATUS_CYCLE[task.status] ?? "pending" })}
+                className="mt-0.5 shrink-0"
+                title={`Mark as ${TASK_STATUS_CYCLE[task.status] ?? "pending"}`}
+              >
+                {task.status === "completed"
+                  ? <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                  : task.status === "in_progress"
+                  ? <Clock className="h-5 w-5 text-yellow-500" />
+                  : <Circle className="h-5 w-5 text-muted-foreground/40 hover:text-primary transition-colors" />}
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-medium ${task.status === "completed" ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                  {task.task_title}
+                </p>
+                {task.notes && <p className="text-xs text-muted-foreground mt-0.5">{task.notes}</p>}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${TASK_PRIORITY_COLOR[task.priority] ?? ""}`}>
+                  {task.priority}
+                </span>
+                {task.due_date && (
+                  <span className="text-[11px] text-muted-foreground">
+                    {new Date(task.due_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {tasks.length === 0 && !addingTask && (
+            <p className="text-muted-foreground text-sm py-6 text-center">No tasks yet.</p>
+          )}
+
+          {/* Add Task */}
+          {addingTask ? (
+            <div className="bg-card border border-border rounded-xl p-4 flex gap-2">
+              <Input
+                placeholder="Task title…"
+                value={newTaskTitle}
+                onChange={(e) => setNewTaskTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newTaskTitle.trim()) addTaskMutation.mutate(newTaskTitle.trim());
+                  if (e.key === "Escape") { setAddingTask(false); setNewTaskTitle(""); }
+                }}
+                autoFocus
+                className="rounded-lg text-sm"
+              />
+              <Button
+                size="sm"
+                onClick={() => newTaskTitle.trim() && addTaskMutation.mutate(newTaskTitle.trim())}
+                disabled={!newTaskTitle.trim() || addTaskMutation.isPending}
+              >
+                {addTaskMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add"}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => { setAddingTask(false); setNewTaskTitle(""); }}>
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setAddingTask(true)}
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors py-2 px-1"
+            >
+              <Plus className="h-4 w-4" /> Add task
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── Timeline Tab ─────────────────────────────────────────────────── */}
+      {activeTab === "timeline" && (
+        <div className="max-w-2xl">
+          {timeline.length === 0 ? (
+            <p className="text-muted-foreground text-sm py-10 text-center">No timeline entries yet.</p>
+          ) : (
+            <div className="relative">
+              <div className="absolute left-3.5 top-0 bottom-0 w-px bg-border" />
+              <div className="space-y-4">
+                {(timeline as any[]).map((entry) => (
+                  <div key={entry.id} className="flex gap-4 pl-10 relative">
+                    <div className="absolute left-2 top-1.5 w-3 h-3 rounded-full bg-primary/20 border-2 border-primary" />
+                    <div className="flex-1 bg-card border border-border rounded-xl p-4">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <p className="text-sm font-medium text-foreground capitalize">
+                          {entry.action_type.replace(/_/g, " ")}
+                        </p>
+                        <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                          {new Date(entry.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                      {entry.description && (
+                        <p className="text-sm text-muted-foreground">{entry.description}</p>
+                      )}
+                      {entry.profiles?.full_name && (
+                        <p className="text-xs text-muted-foreground/70 mt-1">by {entry.profiles.full_name}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Notes Tab ────────────────────────────────────────────────────── */}
+      {activeTab === "notes" && (
+        <div className="max-w-2xl space-y-4">
+          <div className="space-y-3">
+            {notes.length === 0 ? (
+              <p className="text-muted-foreground text-sm py-6 text-center">No notes yet.</p>
+            ) : (
+              (notes as any[]).map((note) => (
+                <div
+                  key={note.id}
+                  className={`p-4 rounded-xl text-sm border ${
+                    note.is_internal
+                      ? "bg-yellow-50 border-yellow-200"
+                      : "bg-card border-border"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="font-medium text-foreground">{note.profiles?.full_name ?? "Unknown"}</span>
+                    {note.is_internal && (
+                      <span className="inline-flex items-center gap-1 text-[11px] text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-full">
+                        <Lock className="h-3 w-3" /> Internal
+                      </span>
+                    )}
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {new Date(note.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                  <p className="text-muted-foreground leading-relaxed">{note.content}</p>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Add Note */}
+          <div className="bg-card border border-border rounded-xl p-5 space-y-3">
+            <h3 className="font-semibold text-foreground text-sm">Add Note</h3>
+            <Textarea
+              placeholder="Add update, follow-up note, patient response…"
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              rows={4}
+              className="resize-none"
+            />
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isInternal}
+                  onChange={(e) => setIsInternal(e.target.checked)}
+                  className="rounded"
+                />
+                Internal only (not visible to patient)
+              </label>
+              <Button
+                size="sm"
+                onClick={() => addNoteMutation.mutate()}
+                disabled={!noteText.trim() || addNoteMutation.isPending}
+                className="gap-2"
+              >
+                {addNoteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                Add Note
+              </Button>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
