@@ -35,19 +35,25 @@ const AdminLogin = () => {
       if (error) throw error;
       if (!data.session) throw new Error("No session returned");
 
-      // Check admin role
-      const { data: roleData } = await localClient
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", data.user.id)
-        .eq("role", "admin")
-        .maybeSingle();
+      // Check admin role via app_metadata (set server-side in Supabase dashboard)
+      // Falls back to user_roles table if app_metadata not set
+      const isAdminMeta = data.user.app_metadata?.role === "admin";
 
-      if (!roleData) {
-        await localClient.auth.signOut();
-        toast({ title: "Access denied", description: "You don't have admin privileges.", variant: "destructive" });
-        setLoading(false);
-        return;
+      if (!isAdminMeta) {
+        // Fallback: check user_roles table
+        const { data: roleData } = await localClient
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", data.user.id)
+          .eq("role", "admin")
+          .maybeSingle();
+
+        if (!roleData) {
+          await localClient.auth.signOut();
+          toast({ title: "Access denied", description: "You don't have admin privileges.", variant: "destructive" });
+          setLoading(false);
+          return;
+        }
       }
 
       // Also set session on the global client so the rest of the app works

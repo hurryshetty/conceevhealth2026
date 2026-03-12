@@ -14,10 +14,12 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Use service role client for all operations (including auth verification)
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+    // Admin client with service role — used for all operations
+    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
 
-    // Verify caller is authenticated using the service role client
+    // Verify caller is authenticated
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -33,18 +35,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verify caller has admin role
-    const { data: roleData } = await adminClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", caller.id)
-      .eq("role", "admin")
-      .maybeSingle();
+    // Verify caller has admin role — check app_metadata first, then user_roles table
+    const isAdminMeta = caller.app_metadata?.role === "admin";
+    if (!isAdminMeta) {
+      const { data: roleData } = await adminClient
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", caller.id)
+        .eq("role", "admin")
+        .maybeSingle();
 
-    if (!roleData) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      if (!roleData) {
+        return new Response(JSON.stringify({ error: "Forbidden — admin role required" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const body = await req.json();
@@ -81,9 +86,7 @@ Deno.serve(async (req) => {
         });
       }
       const { data: newUser, error: createErr } = await adminClient.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
+        email, password, email_confirm: true,
       });
       if (createErr) throw createErr;
 
@@ -104,18 +107,11 @@ Deno.serve(async (req) => {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      // Upsert role
-      const { error: delErr } = await adminClient
-        .from("user_roles")
-        .delete()
-        .eq("user_id", user_id);
-      if (delErr) throw delErr;
-
+      await adminClient.from("user_roles").delete().eq("user_id", user_id);
       const { error: insertErr } = await adminClient
         .from("user_roles")
         .insert({ user_id, role });
       if (insertErr) throw insertErr;
-
       return new Response(JSON.stringify({ success: true }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
