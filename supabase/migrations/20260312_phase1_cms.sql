@@ -39,14 +39,27 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- Ensure columns exist on pre-existing profiles table
+-- Ensure all columns exist on pre-existing profiles table
 ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS full_name   text,
   ADD COLUMN IF NOT EXISTS email       text,
   ADD COLUMN IF NOT EXISTS phone       text,
   ADD COLUMN IF NOT EXISTS hospital_id uuid REFERENCES public.locations(id) ON DELETE SET NULL,
   ADD COLUMN IF NOT EXISTS doctor_id   uuid REFERENCES public.doctors(id)   ON DELETE SET NULL,
   ADD COLUMN IF NOT EXISTS is_active   boolean NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS updated_at  timestamptz NOT NULL DEFAULT now();
+
+-- Add role column separately (needs CHECK constraint handling)
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'role'
+  ) THEN
+    ALTER TABLE public.profiles
+      ADD COLUMN role text NOT NULL DEFAULT 'patient'
+        CHECK (role IN ('admin','coordinator','doctor','hospital','patient','user'));
+  END IF;
+END $$;
 
 -- Backfill profiles for existing users
 INSERT INTO public.profiles (id, email, role)
