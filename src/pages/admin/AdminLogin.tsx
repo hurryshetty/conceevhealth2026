@@ -1,18 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Lock } from "lucide-react";
-
-const FALLBACK_URL = "https://rjmuhomeqydszmerlqrh.supabase.co";
-const FALLBACK_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqbXVob21lcXlkc3ptZXJscXJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTc5NTEsImV4cCI6MjA4ODI5Mzk1MX0.-AePEE5w3zgFwHzgtKfnlPuhRGAKKuTBtPg3BHcEnAA";
-
-const getUrl = () => import.meta.env.VITE_SUPABASE_URL || FALLBACK_URL;
-const getKey = () => import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || FALLBACK_KEY;
 
 const AdminLogin = () => {
   const [email, setEmail] = useState("");
@@ -26,22 +19,16 @@ const AdminLogin = () => {
     setLoading(true);
 
     try {
-      // Create a local client with hardcoded fallbacks to avoid broken env vars
-      const localClient = createClient(getUrl(), getKey(), {
-        auth: { storage: localStorage, persistSession: true, autoRefreshToken: true },
-      });
-
-      const { data, error } = await localClient.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       if (!data.session) throw new Error("No session returned");
 
       // Check admin role via app_metadata (set server-side in Supabase dashboard)
-      // Falls back to user_roles table if app_metadata not set
       const isAdminMeta = data.user.app_metadata?.role === "admin";
 
       if (!isAdminMeta) {
         // Fallback: check user_roles table
-        const { data: roleData } = await localClient
+        const { data: roleData } = await supabase
           .from("user_roles")
           .select("role")
           .eq("user_id", data.user.id)
@@ -49,22 +36,11 @@ const AdminLogin = () => {
           .maybeSingle();
 
         if (!roleData) {
-          await localClient.auth.signOut();
+          await supabase.auth.signOut();
           toast({ title: "Access denied", description: "You don't have admin privileges.", variant: "destructive" });
           setLoading(false);
           return;
         }
-      }
-
-      // Also set session on the global client so the rest of the app works
-      try {
-        await supabase.auth.setSession({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
-        });
-      } catch {
-        // Global client may fail if env vars are broken, but local client session is already persisted
-        console.warn("Could not set session on global client, continuing with local session");
       }
 
       navigate("/admin");
