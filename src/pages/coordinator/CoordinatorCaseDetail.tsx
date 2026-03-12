@@ -554,9 +554,9 @@ const CoordinatorCaseDetail = () => {
               <Building2 className="h-4 w-4 text-muted-foreground" />
               <h3 className="font-semibold text-foreground">Hospital</h3>
             </div>
-            {(caseData as any).locations && (
+            {assignedHospital && (
               <p className="text-xs text-muted-foreground mb-2">
-                Current: <span className="font-medium text-foreground">{(caseData as any).locations.name}</span>
+                Current: <span className="font-medium text-foreground">{assignedHospital.name}</span>
               </p>
             )}
             <Select
@@ -583,9 +583,9 @@ const CoordinatorCaseDetail = () => {
               <UserRound className="h-4 w-4 text-muted-foreground" />
               <h3 className="font-semibold text-foreground">Doctor</h3>
             </div>
-            {(caseData as any).doctors && (
+            {assignedDoctor && (
               <p className="text-xs text-muted-foreground mb-2">
-                Current: <span className="font-medium text-foreground">{(caseData as any).doctors.name}</span>
+                Current: <span className="font-medium text-foreground">{assignedDoctor.name}</span>
               </p>
             )}
             <Select
