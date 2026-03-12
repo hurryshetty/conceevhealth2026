@@ -315,7 +315,7 @@ const CoordinatorCaseDetail = () => {
   return (
     <div>
       {/* Back */}
-      <Button variant="ghost" onClick={() => navigate("/coordinator/cases")} className="gap-2 mb-5 -ml-2">
+      <Button variant="ghost" onClick={() => navigate(-1)} className="gap-2 mb-5 -ml-2">
         <ArrowLeft className="h-4 w-4" /> Back to Cases
       </Button>
 

@@ -40,6 +40,7 @@ import AdminDoctors from "./pages/admin/AdminDoctors";
 import AdminLocations from "./pages/admin/AdminLocations";
 import AdminSpecialties from "./pages/admin/AdminSpecialties";
 import AdminLeads from "./pages/admin/AdminLeads";
+import AdminCases from "./pages/admin/AdminCases";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminVerification from "./pages/admin/AdminVerification";
 import AdminSettings from "./pages/admin/AdminSettings";
@@ -122,6 +123,8 @@ const App = () => (
             <Route path="hospitals" element={<AdminLocations />} />
             <Route path="specialties" element={<AdminSpecialties />} />
             <Route path="leads" element={<AdminLeads />} />
+            <Route path="cases" element={<AdminCases />} />
+            <Route path="cases/:id" element={<CoordinatorCaseDetail />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="verification" element={<AdminVerification />} />
             <Route path="settings" element={<AdminSettings />} />
