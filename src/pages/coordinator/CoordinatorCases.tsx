@@ -66,7 +66,7 @@ const CoordinatorCases = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_cases")
-        .select("*, specialties(name), locations(name)")
+        .select("*, specialties(name), locations!hospital_id(name)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;

@@ -115,7 +115,7 @@ const CoordinatorCaseDetail = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_cases")
-        .select("*, specialties(name), locations(name, city), doctors(name, specialty)")
+        .select("*, specialties(name), locations!hospital_id(name, city), doctors!doctor_id(name, specialty)")
         .eq("id", id!)
         .single();
       if (error) throw error;
