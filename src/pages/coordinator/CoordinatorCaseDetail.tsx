@@ -107,6 +107,7 @@ const CoordinatorCaseDetail = () => {
   const [newStage, setNewStage] = useState("");
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [addingTask, setAddingTask] = useState(false);
+  const [assignHospitalId, setAssignHospitalId] = useState<string>("");
 
   // ── Data queries ─────────────────────────────────────────────────────────
 
@@ -137,24 +138,24 @@ const CoordinatorCaseDetail = () => {
   });
 
   const { data: hospitals = [] } = useQuery({
-    queryKey: ["locations-list"],
+    queryKey: ["locations-list-published"],
     queryFn: async () => {
       const { data } = await supabase
         .from("locations")
         .select("id, name, city")
-        .eq("is_active", true)
+        .eq("is_published", true)
         .order("name");
       return data ?? [];
     },
   });
 
   const { data: doctors = [] } = useQuery({
-    queryKey: ["doctors-list"],
+    queryKey: ["doctors-list-published"],
     queryFn: async () => {
       const { data } = await supabase
         .from("doctors")
-        .select("id, name, specialty")
-        .eq("is_active", true)
+        .select("id, name, designation, hospitals")
+        .eq("is_published", true)
         .order("name");
       return data ?? [];
     },
@@ -333,6 +334,16 @@ const CoordinatorCaseDetail = () => {
   // Derive names from already-fetched lists (avoids FK join issues)
   const assignedHospital = (hospitals as any[]).find((h) => h.id === caseData.hospital_id);
   const assignedDoctor = (doctors as any[]).find((d) => d.id === caseData.doctor_id);
+
+  // For the assignment tab: use pending selection or fall back to saved hospital
+  const effectiveHospitalId = assignHospitalId || caseData.hospital_id || "";
+  const effectiveHospital = (hospitals as any[]).find((h) => h.id === effectiveHospitalId);
+  // Filter doctors to those who work at the selected hospital
+  const filteredDoctors = effectiveHospital
+    ? (doctors as any[]).filter((d) =>
+        Array.isArray(d.hospitals) && d.hospitals.includes(effectiveHospital.name)
+      )
+    : [];
 
   return (
     <div>
@@ -559,21 +570,28 @@ const CoordinatorCaseDetail = () => {
                 Current: <span className="font-medium text-foreground">{assignedHospital.name}</span>
               </p>
             )}
-            <Select
-              defaultValue={caseData.hospital_id ?? ""}
-              onValueChange={(v) => assignMutation.mutate({ hospitalId: v })}
-            >
-              <SelectTrigger className="rounded-lg text-sm">
-                <SelectValue placeholder="Select hospital…" />
-              </SelectTrigger>
-              <SelectContent>
-                {(hospitals as any[]).map((h) => (
-                  <SelectItem key={h.id} value={h.id}>
-                    {h.name}{h.city ? ` — ${h.city}` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {hospitals.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No approved hospitals found.</p>
+            ) : (
+              <Select
+                value={effectiveHospitalId}
+                onValueChange={(v) => {
+                  setAssignHospitalId(v);
+                  assignMutation.mutate({ hospitalId: v });
+                }}
+              >
+                <SelectTrigger className="rounded-lg text-sm">
+                  <SelectValue placeholder="Select hospital…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(hospitals as any[]).map((h) => (
+                    <SelectItem key={h.id} value={h.id}>
+                      {h.name}{h.city ? ` — ${h.city}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             {assignMutation.isPending && <p className="text-xs text-muted-foreground mt-1">Saving…</p>}
           </div>
 
@@ -588,21 +606,27 @@ const CoordinatorCaseDetail = () => {
                 Current: <span className="font-medium text-foreground">{assignedDoctor.name}</span>
               </p>
             )}
-            <Select
-              defaultValue={caseData.doctor_id ?? ""}
-              onValueChange={(v) => assignMutation.mutate({ doctorId: v })}
-            >
-              <SelectTrigger className="rounded-lg text-sm">
-                <SelectValue placeholder="Select doctor…" />
-              </SelectTrigger>
-              <SelectContent>
-                {(doctors as any[]).map((d) => (
-                  <SelectItem key={d.id} value={d.id}>
-                    {d.name}{d.specialty ? ` — ${d.specialty}` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {!effectiveHospitalId ? (
+              <p className="text-xs text-muted-foreground">Select a hospital first to see available doctors.</p>
+            ) : filteredDoctors.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No approved doctors found for this hospital.</p>
+            ) : (
+              <Select
+                value={caseData.doctor_id ?? ""}
+                onValueChange={(v) => assignMutation.mutate({ doctorId: v })}
+              >
+                <SelectTrigger className="rounded-lg text-sm">
+                  <SelectValue placeholder="Select doctor…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredDoctors.map((d: any) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.name}{d.designation ? ` — ${d.designation}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           {/* Estimated Cost */}
