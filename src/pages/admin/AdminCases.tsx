@@ -57,10 +57,11 @@ const AdminCases = () => {
 
   const { data: cases = [], isLoading, isError, error } = useQuery({
     queryKey: ["admin-cases-all"],
+    refetchOnMount: "always",
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_cases")
-        .select("*, specialties(name), locations(name)")
+        .select("id, title, case_code, case_stage, priority, created_at, specialty_id, hospital_id")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as any[];
@@ -188,9 +189,7 @@ const AdminCases = () => {
                   </div>
                   <p className="text-sm font-medium text-foreground truncate">{c.title}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {c.specialties?.name && `${c.specialties.name}`}
-                    {c.locations?.name && ` • ${c.locations.name}`}
-                    {c.doctors?.name && ` • Dr. ${c.doctors.name}`}
+                    {c.specialty_id && `Specialty: ${c.specialty_id}`}
                   </p>
                 </div>
                 <div className="flex items-center gap-3 ml-4 shrink-0">
