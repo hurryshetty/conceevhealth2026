@@ -89,10 +89,16 @@ export const CaseAppointments = ({ caseId }: Props) => {
     },
   });
 
-  // Filter doctors to only those who belong to the selected hospital
+  // Filter doctors to only those who belong to the selected hospital.
+  // Comparison is case-insensitive + trimmed to handle minor data mismatches.
   const selectedHospitalName = (hospitals as any[]).find((h) => h.id === form.hospital_id)?.name ?? "";
+  const normalise = (s: string) => s.trim().toLowerCase();
   const filteredDoctors = selectedHospitalName
-    ? (allDoctors as any[]).filter((d) => Array.isArray(d.hospitals) && d.hospitals.includes(selectedHospitalName))
+    ? (allDoctors as any[]).filter((d) => {
+        if (!d.hospitals) return false;
+        const arr: string[] = Array.isArray(d.hospitals) ? d.hospitals : [String(d.hospitals)];
+        return arr.some((h) => normalise(h) === normalise(selectedHospitalName));
+      })
     : [];
 
   const validate = () => {
