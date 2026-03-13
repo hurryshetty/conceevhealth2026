@@ -66,7 +66,7 @@ export const CaseAppointments = ({ caseId }: Props) => {
   });
 
   const { data: allDoctors = [] } = useQuery({
-    queryKey: ["doctors-list"],
+    queryKey: ["doctors-list-published"],
     queryFn: async () => {
       const { data } = await supabase
         .from("doctors")
@@ -75,10 +75,12 @@ export const CaseAppointments = ({ caseId }: Props) => {
         .order("name");
       return data ?? [];
     },
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const { data: hospitals = [] } = useQuery({
-    queryKey: ["locations-list"],
+    queryKey: ["locations-list-published"],
     queryFn: async () => {
       const { data } = await supabase
         .from("locations")
@@ -87,6 +89,8 @@ export const CaseAppointments = ({ caseId }: Props) => {
         .order("name");
       return data ?? [];
     },
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   // Filter doctors to only those who belong to the selected hospital.

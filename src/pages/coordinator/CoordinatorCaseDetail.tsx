@@ -143,10 +143,13 @@ const CoordinatorCaseDetail = () => {
       const { data, error } = await supabase
         .from("locations")
         .select("id, name, is_published")
+        .eq("is_published", true)
         .order("name");
       if (error) console.error("locations query error:", error);
-      return (data ?? []).filter((h: any) => h.is_published === true);
+      return data ?? [];
     },
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const { data: doctors = [] } = useQuery({
@@ -155,10 +158,13 @@ const CoordinatorCaseDetail = () => {
       const { data, error } = await supabase
         .from("doctors")
         .select("id, name, designation, hospitals, is_published")
+        .eq("is_published", true)
         .order("name");
       if (error) console.error("doctors query error:", error);
-      return (data ?? []).filter((d: any) => d.is_published === true);
+      return data ?? [];
     },
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const { data: tasks = [], refetch: refetchTasks } = useQuery({
