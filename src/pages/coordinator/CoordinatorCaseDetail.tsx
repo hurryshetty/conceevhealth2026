@@ -190,7 +190,7 @@ const CoordinatorCaseDetail = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("case_notes")
-        .select("*, profiles!author_id(full_name)")
+        .select("*")
         .eq("case_id", id!)
         .order("created_at", { ascending: true });
       return data ?? [];
@@ -824,7 +824,7 @@ const CoordinatorCaseDetail = () => {
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-1.5">
-                    <span className="font-medium text-foreground">{note.profiles?.full_name ?? "Unknown"}</span>
+                    <span className="font-medium text-foreground">{"Coordinator"}</span>
                     {note.is_internal && (
                       <span className="inline-flex items-center gap-1 text-[11px] text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-full">
                         <Lock className="h-3 w-3" /> Internal
