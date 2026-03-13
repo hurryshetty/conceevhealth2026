@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,41 +8,44 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Loader2, IndianRupee, CheckCircle2, Clock, XCircle, FileText } from "lucide-react";
+import {
+  Plus, Loader2, IndianRupee, CheckCircle2, FileText, Upload,
+  Download, Eye, XCircle,
+} from "lucide-react";
 import { addTimelineEntry } from "@/lib/caseService";
 
 const BILLING_TYPES = [
-  { value: "consultation",   label: "Consultation" },
-  { value: "procedure",      label: "Procedure" },
-  { value: "hospital_stay",  label: "Hospital Stay" },
-  { value: "medicine",       label: "Medicine" },
-  { value: "lab",            label: "Lab / Diagnostics" },
-  { value: "other",          label: "Other" },
+  { value: "consultation",  label: "Consultation" },
+  { value: "procedure",     label: "Procedure" },
+  { value: "hospital_stay", label: "Hospital Stay" },
+  { value: "medicine",      label: "Medicine" },
+  { value: "lab",           label: "Lab / Diagnostics" },
+  { value: "other",         label: "Other" },
 ];
 
 const PAYMENT_METHODS = [
-  { value: "cash",           label: "Cash" },
-  { value: "upi",            label: "UPI" },
-  { value: "card",           label: "Card" },
-  { value: "bank_transfer",  label: "Bank Transfer" },
-  { value: "insurance",      label: "Insurance" },
-  { value: "other",          label: "Other" },
+  { value: "upi",           label: "UPI",           refLabel: "Transaction ID" },
+  { value: "bank_transfer", label: "Bank Transfer",  refLabel: "Reference Number" },
+  { value: "card",          label: "Card",           refLabel: "Transaction ID" },
+  { value: "cash",          label: "Cash",           refLabel: null },
+  { value: "insurance",     label: "Insurance",      refLabel: "Policy / Claim Number" },
+  { value: "other",         label: "Other",          refLabel: "Reference" },
 ];
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  pending:   { label: "Pending",   color: "bg-yellow-100 text-yellow-700" },
-  invoiced:  { label: "Invoiced",  color: "bg-blue-100 text-blue-700" },
-  paid:      { label: "Paid",      color: "bg-emerald-100 text-emerald-700" },
-  waived:    { label: "Waived",    color: "bg-gray-100 text-gray-600" },
-  refunded:  { label: "Refunded",  color: "bg-purple-100 text-purple-700" },
+  pending:  { label: "Pending",  color: "bg-yellow-100 text-yellow-700" },
+  invoiced: { label: "Invoiced", color: "bg-blue-100 text-blue-700" },
+  paid:     { label: "Paid",     color: "bg-emerald-100 text-emerald-700" },
+  waived:   { label: "Waived",   color: "bg-gray-100 text-gray-600" },
+  refunded: { label: "Refunded", color: "bg-purple-100 text-purple-700" },
 };
 
 const emptyForm = {
+  billing_title: "",
   billing_type: "other",
   description: "",
   amount: "",
   due_date: "",
-  invoice_number: "",
   notes: "",
 };
 
@@ -52,12 +55,23 @@ export const CaseBilling = ({ caseId }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
-  const [showForm, setShowForm] = useState(false);
-  const [markingPaid, setMarkingPaid] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState("upi");
-  const [form, setForm] = useState(emptyForm);
+  const proofRef = useRef<HTMLInputElement>(null);
 
-  const set = (k: keyof typeof form) => (v: string) => setForm((p) => ({ ...p, [k]: v }));
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  // Per-item pay panel state
+  const [payItemId, setPayItemId] = useState<string | null>(null);
+  const [payMethod, setPayMethod] = useState("upi");
+  const [payReference, setPayReference] = useState("");
+  const [payProofUploading, setPayProofUploading] = useState(false);
+  const [payProofPath, setPayProofPath] = useState("");
+
+  const set = (k: keyof typeof form) => (v: string) => {
+    setForm((p) => ({ ...p, [k]: v }));
+    if (formErrors[k]) setFormErrors((e) => ({ ...e, [k]: "" }));
+  };
 
   const { data: items = [] } = useQuery({
     queryKey: ["case-billing", caseId],
@@ -71,24 +85,26 @@ export const CaseBilling = ({ caseId }: Props) => {
     },
   });
 
+  // ── Create billing item ──────────────────────────────────────────────────
   const createMutation = useMutation({
     mutationFn: async () => {
       const amount = parseFloat(form.amount);
       if (isNaN(amount) || amount <= 0) throw new Error("Invalid amount");
       const { error } = await supabase.from("case_billing").insert({
         case_id: caseId,
+        billing_title: form.billing_title.trim() || null,
         billing_type: form.billing_type,
-        description: form.description,
+        description: form.description.trim(),
         amount,
         due_date: form.due_date || null,
-        invoice_number: form.invoice_number || null,
-        notes: form.notes || null,
+        notes: form.notes.trim() || null,
         created_by: user!.id,
+        // invoice_number auto-generated by DB sequence
       });
       if (error) throw error;
       await addTimelineEntry(
         caseId, "billing_added",
-        `Billing item added: ${form.description} — ₹${amount.toLocaleString("en-IN")}`,
+        `Billing item added: ${form.billing_title || form.description} — ₹${amount.toLocaleString("en-IN")}`,
         user!.id,
       );
     },
@@ -97,11 +113,31 @@ export const CaseBilling = ({ caseId }: Props) => {
       qc.invalidateQueries({ queryKey: ["case-timeline", caseId] });
       toast({ title: "Billing item added" });
       setForm(emptyForm);
+      setFormErrors({});
       setShowForm(false);
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  // ── Mark as invoiced ─────────────────────────────────────────────────────
+  const invoiceMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      const { error } = await supabase
+        .from("case_billing")
+        .update({ status: "invoiced", updated_at: new Date().toISOString() })
+        .eq("id", itemId);
+      if (error) throw error;
+      await addTimelineEntry(caseId, "invoice_generated", "Invoice generated", user!.id);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["case-billing", caseId] });
+      qc.invalidateQueries({ queryKey: ["case-timeline", caseId] });
+      toast({ title: "Marked as invoiced" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  // ── Record payment ───────────────────────────────────────────────────────
   const markPaidMutation = useMutation({
     mutationFn: async ({ itemId, amount }: { itemId: string; amount: number }) => {
       const { error } = await supabase
@@ -109,14 +145,17 @@ export const CaseBilling = ({ caseId }: Props) => {
         .update({
           status: "paid",
           paid_at: new Date().toISOString(),
-          payment_method: paymentMethod,
+          payment_method: payMethod,
+          payment_reference: payReference.trim() || null,
+          payment_proof_path: payProofPath || null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", itemId);
       if (error) throw error;
+      const methodLabel = PAYMENT_METHODS.find((m) => m.value === payMethod)?.label ?? payMethod;
       await addTimelineEntry(
         caseId, "payment_received",
-        `Payment received: ₹${amount.toLocaleString("en-IN")} via ${paymentMethod}`,
+        `Payment received: ₹${amount.toLocaleString("en-IN")} via ${methodLabel}${payReference ? ` (Ref: ${payReference})` : ""}`,
         user!.id,
       );
     },
@@ -124,29 +163,108 @@ export const CaseBilling = ({ caseId }: Props) => {
       qc.invalidateQueries({ queryKey: ["case-billing", caseId] });
       qc.invalidateQueries({ queryKey: ["case-timeline", caseId] });
       toast({ title: "Payment recorded" });
-      setMarkingPaid(null);
+      resetPayPanel();
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  const statusMutation = useMutation({
-    mutationFn: async ({ itemId, status }: { itemId: string; status: string }) => {
-      const { error } = await supabase
-        .from("case_billing")
-        .update({ status, updated_at: new Date().toISOString() })
-        .eq("id", itemId);
+  const resetPayPanel = () => {
+    setPayItemId(null);
+    setPayMethod("upi");
+    setPayReference("");
+    setPayProofPath("");
+  };
+
+  // ── Upload payment proof ─────────────────────────────────────────────────
+  const handleProofUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPayProofUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const filePath = `payment-proofs/${caseId}/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage
+        .from("case-documents")
+        .upload(filePath, file, { contentType: file.type });
       if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["case-billing", caseId] }),
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
-  });
+      setPayProofPath(filePath);
+      toast({ title: "Proof uploaded" });
+    } catch (e: any) {
+      toast({ title: "Upload failed", description: e.message, variant: "destructive" });
+    } finally {
+      setPayProofUploading(false);
+    }
+  };
 
-  // Summary totals
-  const totalBilled = (items as any[]).filter((i) => !["waived", "refunded"].includes(i.status))
-    .reduce((s, i) => s + Number(i.amount), 0);
-  const totalPaid = (items as any[]).filter((i) => i.status === "paid")
-    .reduce((s, i) => s + Number(i.amount), 0);
-  const outstanding = totalBilled - totalPaid;
+  const handleViewProof = async (path: string) => {
+    const { data } = await supabase.storage.from("case-documents").createSignedUrl(path, 300);
+    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+  };
+
+  // ── Download invoice ─────────────────────────────────────────────────────
+  const handleDownloadInvoice = (item: any) => {
+    const methodLabel = PAYMENT_METHODS.find((m) => m.value === item.payment_method)?.label ?? "";
+    const typeLabel   = BILLING_TYPES.find((t) => t.value === item.billing_type)?.label ?? "";
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Invoice ${item.invoice_number ?? ""}</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 680px; margin: 40px auto; color: #111; }
+    h1   { font-size: 22px; margin-bottom: 4px; }
+    .meta { color: #666; font-size: 13px; margin-bottom: 24px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
+    th { background: #f9fafb; font-weight: 600; }
+    .amount { font-size: 18px; font-weight: 700; margin-top: 24px; }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px;
+             background: ${item.status === "paid" ? "#d1fae5" : "#fef3c7"}; color: ${item.status === "paid" ? "#065f46" : "#92400e"}; }
+    @media print { button { display:none; } }
+  </style>
+</head>
+<body>
+  <h1>Invoice</h1>
+  <div class="meta">
+    ${item.invoice_number ? `<strong>${item.invoice_number}</strong> &nbsp;|&nbsp; ` : ""}
+    ${new Date(item.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
+    &nbsp;|&nbsp; <span class="badge">${STATUS_CONFIG[item.status]?.label ?? item.status}</span>
+  </div>
+  <table>
+    <tr><th>Title</th><td>${item.billing_title ?? item.description}</td></tr>
+    <tr><th>Description</th><td>${item.description}</td></tr>
+    <tr><th>Type</th><td>${typeLabel}</td></tr>
+    ${item.due_date ? `<tr><th>Due Date</th><td>${new Date(item.due_date).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</td></tr>` : ""}
+    ${item.paid_at ? `<tr><th>Paid On</th><td>${new Date(item.paid_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</td></tr>` : ""}
+    ${item.payment_method ? `<tr><th>Payment Method</th><td>${methodLabel}</td></tr>` : ""}
+    ${item.payment_reference ? `<tr><th>Reference</th><td>${item.payment_reference}</td></tr>` : ""}
+    ${item.notes ? `<tr><th>Notes</th><td>${item.notes}</td></tr>` : ""}
+  </table>
+  <p class="amount">Amount: ₹${Number(item.amount).toLocaleString("en-IN")}</p>
+  <br/>
+  <button onclick="window.print()">🖨 Print / Save as PDF</button>
+</body>
+</html>`;
+    const win = window.open("", "_blank");
+    win?.document.write(html);
+    win?.document.close();
+  };
+
+  // ── Validation ───────────────────────────────────────────────────────────
+  const validate = () => {
+    const errors: Record<string, string> = {};
+    if (!form.description.trim()) errors.description = "Required";
+    if (!form.amount || parseFloat(form.amount) <= 0) errors.amount = "Enter a valid amount";
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // ── Summary totals ───────────────────────────────────────────────────────
+  const totalBilled  = (items as any[]).filter((i) => !["waived", "refunded"].includes(i.status)).reduce((s, i) => s + Number(i.amount), 0);
+  const totalPaid    = (items as any[]).filter((i) => i.status === "paid").reduce((s, i) => s + Number(i.amount), 0);
+  const outstanding  = totalBilled - totalPaid;
+
+  const currentPayMethod = PAYMENT_METHODS.find((m) => m.value === payMethod);
 
   return (
     <div className="max-w-2xl space-y-4">
@@ -156,13 +274,11 @@ export const CaseBilling = ({ caseId }: Props) => {
           {[
             { label: "Total Billed", amount: totalBilled, color: "text-foreground" },
             { label: "Total Paid",   amount: totalPaid,   color: "text-emerald-600" },
-            { label: "Outstanding",  amount: outstanding, color: outstanding > 0 ? "text-red-600" : "text-emerald-600" },
+            { label: "Outstanding",  amount: outstanding, color: outstanding > 0 ? "text-destructive" : "text-emerald-600" },
           ].map((s) => (
             <div key={s.label} className="bg-card border border-border rounded-xl p-4 text-center">
               <p className="text-xs text-muted-foreground mb-1">{s.label}</p>
-              <p className={`text-lg font-bold ${s.color}`}>
-                ₹{s.amount.toLocaleString("en-IN")}
-              </p>
+              <p className={`text-lg font-bold ${s.color}`}>₹{s.amount.toLocaleString("en-IN")}</p>
             </div>
           ))}
         </div>
@@ -172,6 +288,18 @@ export const CaseBilling = ({ caseId }: Props) => {
       {showForm ? (
         <div className="bg-card border border-border rounded-xl p-5 space-y-3">
           <h3 className="font-semibold text-foreground text-sm">Add Billing Item</h3>
+
+          {/* Billing Title */}
+          <div>
+            <Label className="text-xs mb-1.5 block">Billing Title</Label>
+            <Input
+              value={form.billing_title}
+              onChange={(e) => set("billing_title")(e.target.value)}
+              placeholder="e.g. IVF Procedure Package"
+              className="rounded-lg text-sm"
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs mb-1.5 block">Type</Label>
@@ -183,63 +311,56 @@ export const CaseBilling = ({ caseId }: Props) => {
               </Select>
             </div>
             <div>
-              <Label className="text-xs mb-1.5 block">Amount (₹)</Label>
+              <Label className="text-xs mb-1.5 block">Amount (₹) <span className="text-destructive">*</span></Label>
               <Input
                 type="number"
                 value={form.amount}
-                onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))}
+                onChange={(e) => set("amount")(e.target.value)}
                 placeholder="0"
-                className="rounded-lg text-sm"
+                className={`rounded-lg text-sm ${formErrors.amount ? "border-destructive" : ""}`}
               />
+              {formErrors.amount && <p className="text-[11px] text-destructive mt-1">{formErrors.amount}</p>}
             </div>
             <div className="col-span-2">
-              <Label className="text-xs mb-1.5 block">Description *</Label>
+              <Label className="text-xs mb-1.5 block">Description <span className="text-destructive">*</span></Label>
               <Input
                 value={form.description}
-                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-                placeholder="e.g. IVF Procedure Package"
-                className="rounded-lg text-sm"
+                onChange={(e) => set("description")(e.target.value)}
+                placeholder="e.g. IVF cycle including monitoring and retrieval"
+                className={`rounded-lg text-sm ${formErrors.description ? "border-destructive" : ""}`}
               />
+              {formErrors.description && <p className="text-[11px] text-destructive mt-1">{formErrors.description}</p>}
             </div>
             <div>
               <Label className="text-xs mb-1.5 block">Due Date</Label>
               <Input
                 type="date"
                 value={form.due_date}
-                onChange={(e) => setForm((p) => ({ ...p, due_date: e.target.value }))}
+                onChange={(e) => set("due_date")(e.target.value)}
                 className="rounded-lg text-sm"
-              />
-            </div>
-            <div>
-              <Label className="text-xs mb-1.5 block">Invoice Number</Label>
-              <Input
-                value={form.invoice_number}
-                onChange={(e) => setForm((p) => ({ ...p, invoice_number: e.target.value }))}
-                placeholder="INV-001"
-                className="rounded-lg text-sm"
-              />
-            </div>
-            <div className="col-span-2">
-              <Label className="text-xs mb-1.5 block">Notes</Label>
-              <Textarea
-                value={form.notes}
-                onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
-                rows={2}
-                className="resize-none text-sm"
               />
             </div>
           </div>
+
+          <div>
+            <Label className="text-xs mb-1.5 block">Notes <span className="text-muted-foreground text-[11px]">(optional)</span></Label>
+            <Textarea
+              value={form.notes}
+              onChange={(e) => set("notes")(e.target.value)}
+              rows={2}
+              className="resize-none text-sm"
+              placeholder="Additional details…"
+            />
+          </div>
+
+          <p className="text-[11px] text-muted-foreground">Invoice number will be auto-generated on save.</p>
+
           <div className="flex gap-2">
-            <Button
-              size="sm"
-              onClick={() => createMutation.mutate()}
-              disabled={!form.description || !form.amount || createMutation.isPending}
-              className="gap-2"
-            >
-              {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            <Button size="sm" onClick={() => { if (validate()) createMutation.mutate(); }} disabled={createMutation.isPending} className="gap-2">
+              {createMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               Add Item
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => { setShowForm(false); setForm(emptyForm); }}>
+            <Button size="sm" variant="ghost" onClick={() => { setShowForm(false); setForm(emptyForm); setFormErrors({}); }}>
               Cancel
             </Button>
           </div>
@@ -257,93 +378,186 @@ export const CaseBilling = ({ caseId }: Props) => {
       {items.length === 0 && !showForm ? (
         <p className="text-muted-foreground text-sm py-6 text-center">No billing items yet.</p>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {(items as any[]).map((item) => {
             const sc = STATUS_CONFIG[item.status] ?? { label: item.status, color: "bg-gray-100 text-gray-600" };
+            const isPayOpen = payItemId === item.id;
+
             return (
-              <div key={item.id} className="bg-card border border-border rounded-xl p-4">
+              <div key={item.id} className="bg-card border border-border rounded-xl p-4 space-y-3">
+                {/* Header */}
                 <div className="flex items-start gap-3">
                   <IndianRupee className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <p className="text-sm font-medium text-foreground">{item.description}</p>
+                    {item.billing_title && (
+                      <p className="text-sm font-semibold text-foreground">{item.billing_title}</p>
+                    )}
+                    <div className="flex items-center gap-2 flex-wrap mt-0.5 mb-1">
+                      <p className={`text-sm ${item.billing_title ? "text-muted-foreground" : "font-medium text-foreground"}`}>
+                        {item.description}
+                      </p>
                       <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${sc.color}`}>{sc.label}</span>
                     </div>
-                    <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                      <span className="font-semibold text-foreground">₹{Number(item.amount).toLocaleString("en-IN")}</span>
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                      <span className="font-semibold text-foreground text-sm">₹{Number(item.amount).toLocaleString("en-IN")}</span>
                       <span>{BILLING_TYPES.find((t) => t.value === item.billing_type)?.label}</span>
-                      {item.due_date && <span>Due: {new Date(item.due_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>}
-                      {item.invoice_number && <span>Inv: {item.invoice_number}</span>}
-                      {item.payment_method && <span>via {item.payment_method}</span>}
+                      {item.invoice_number && <span className="font-medium">#{item.invoice_number}</span>}
+                      {item.due_date && (
+                        <span className={new Date(item.due_date) < new Date() && item.status !== "paid" ? "text-destructive font-medium" : ""}>
+                          Due: {new Date(item.due_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                        </span>
+                      )}
+                      {item.paid_at && (
+                        <span className="text-emerald-600">
+                          Paid {new Date(item.paid_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                          {item.payment_method && ` via ${PAYMENT_METHODS.find((m) => m.value === item.payment_method)?.label ?? item.payment_method}`}
+                          {item.payment_reference && ` · Ref: ${item.payment_reference}`}
+                        </span>
+                      )}
                     </div>
                     {item.notes && <p className="text-xs text-muted-foreground mt-1 italic">{item.notes}</p>}
                   </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 shrink-0">
-                    {item.status === "pending" && (
-                      <>
-                        {markingPaid === item.id ? (
-                          <div className="flex items-center gap-1">
-                            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                              <SelectTrigger className="h-7 text-xs w-28 rounded-md">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {PAYMENT_METHODS.map((m) => (
-                                  <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <button
-                              onClick={() => markPaidMutation.mutate({ itemId: item.id, amount: Number(item.amount) })}
-                              className="h-7 px-2 bg-emerald-600 text-white text-xs rounded-md hover:bg-emerald-700 transition-colors"
-                            >
-                              Confirm
-                            </button>
-                            <button
-                              onClick={() => setMarkingPaid(null)}
-                              className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
-                            >
-                              <XCircle className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => setMarkingPaid(item.id)}
-                              title="Mark as paid"
-                              className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
-                            >
-                              <CheckCircle2 className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              onClick={() => statusMutation.mutate({ itemId: item.id, status: "invoiced" })}
-                              title="Mark as invoiced"
-                              className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                            >
-                              <FileText className="h-3.5 w-3.5" />
-                            </button>
-                          </>
-                        )}
-                      </>
-                    )}
-                    {item.status === "invoiced" && (
-                      <button
-                        onClick={() => setMarkingPaid(item.id)}
-                        title="Mark as paid"
-                        className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
-                      >
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
+                  {/* View proof */}
+                  {item.payment_proof_path && (
+                    <button
+                      onClick={() => handleViewProof(item.payment_proof_path)}
+                      title="View payment proof"
+                      className="shrink-0 w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
-                {/* Paid timestamp */}
-                {item.paid_at && (
-                  <p className="text-xs text-emerald-600 mt-2 pl-7">
-                    Paid on {new Date(item.paid_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                  </p>
+
+                {/* Action buttons (not paid/waived/refunded) */}
+                {!["paid", "waived", "refunded"].includes(item.status) && !isPayOpen && (
+                  <div className="flex flex-wrap gap-2 pt-1 border-t border-border">
+                    {item.status === "pending" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 text-blue-700 border-blue-200 hover:bg-blue-50"
+                        onClick={() => invoiceMutation.mutate(item.id)}
+                        disabled={invoiceMutation.isPending}
+                      >
+                        <FileText className="h-4 w-4" />
+                        Generate Invoice
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                      onClick={() => { setPayItemId(item.id); setPayMethod("upi"); setPayReference(""); setPayProofPath(""); }}
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                      Record Payment
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5"
+                      onClick={() => handleDownloadInvoice(item)}
+                    >
+                      <Download className="h-4 w-4" />
+                      Download Invoice
+                    </Button>
+                  </div>
+                )}
+
+                {/* Download invoice for paid items */}
+                {item.status === "paid" && (
+                  <div className="pt-1 border-t border-border">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5"
+                      onClick={() => handleDownloadInvoice(item)}
+                    >
+                      <Download className="h-4 w-4" />
+                      Download Invoice
+                    </Button>
+                  </div>
+                )}
+
+                {/* Record Payment inline panel */}
+                {isPayOpen && (
+                  <div className="border-t border-border pt-3 space-y-3">
+                    <p className="text-xs font-semibold text-foreground">Record Payment</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs mb-1.5 block">Payment Mode <span className="text-destructive">*</span></Label>
+                        <Select value={payMethod} onValueChange={(v) => { setPayMethod(v); setPayReference(""); }}>
+                          <SelectTrigger className="rounded-lg text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {PAYMENT_METHODS.map((m) => (
+                              <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {currentPayMethod?.refLabel && (
+                        <div>
+                          <Label className="text-xs mb-1.5 block">{currentPayMethod.refLabel}</Label>
+                          <Input
+                            value={payReference}
+                            onChange={(e) => setPayReference(e.target.value)}
+                            placeholder={`Enter ${currentPayMethod.refLabel}`}
+                            className="rounded-lg text-sm"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Payment Proof Upload */}
+                    <div>
+                      <Label className="text-xs mb-1.5 block">Payment Proof <span className="text-muted-foreground text-[11px]">(screenshot / receipt)</span></Label>
+                      <input
+                        ref={proofRef}
+                        type="file"
+                        onChange={handleProofUpload}
+                        className="hidden"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                      />
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5"
+                          onClick={() => proofRef.current?.click()}
+                          disabled={payProofUploading}
+                        >
+                          {payProofUploading
+                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            : <Upload className="h-3.5 w-3.5" />}
+                          {payProofPath ? "Re-upload" : "Upload Proof"}
+                        </Button>
+                        {payProofPath && (
+                          <span className="text-xs text-emerald-600 flex items-center gap-1">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Uploaded
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"
+                        onClick={() => markPaidMutation.mutate({ itemId: item.id, amount: Number(item.amount) })}
+                        disabled={markPaidMutation.isPending}
+                      >
+                        {markPaidMutation.isPending
+                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          : <CheckCircle2 className="h-3.5 w-3.5" />}
+                        Confirm Payment
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={resetPayPanel}>
+                        <XCircle className="h-3.5 w-3.5 mr-1" /> Cancel
+                      </Button>
+                    </div>
+                  </div>
                 )}
               </div>
             );
