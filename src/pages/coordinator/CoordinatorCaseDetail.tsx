@@ -10,10 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  ArrowLeft, Send, Lock, Building2, UserRound, CheckCircle2,
+  ArrowLeft, Building2, UserRound, CheckCircle2,
   Circle, Clock, ListTodo, GitBranch, StickyNote, Layers,
-  CalendarDays, IndianRupee, AlertTriangle, Plus, Loader2,
-  FileText, Banknote,
+  CalendarDays, IndianRupee, AlertTriangle, Loader2,
+  FileText, Banknote, UserCog, Pencil, Save, X,
 } from "lucide-react";
 import {
   assignCase, updateCaseStage, addTimelineEntry,
@@ -24,6 +24,7 @@ import { CaseBilling } from "@/components/case/CaseBilling";
 import { CaseTasks } from "@/components/case/CaseTasks";
 import { CaseNotes } from "@/components/case/CaseNotes";
 import { CaseSettlements } from "@/components/case/CaseSettlements";
+import { CasePatientInfo } from "@/components/case/CasePatientInfo";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -68,18 +69,19 @@ const STAGE_COLOR: Record<string, string> = {
 };
 
 
-type TabId = "overview" | "assignment" | "tasks" | "timeline" | "notes" | "documents" | "appointments" | "billing" | "settlements";
+type TabId = "overview" | "patient_info" | "assignment" | "tasks" | "timeline" | "notes" | "documents" | "appointments" | "billing" | "settlements";
 
 const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
-  { id: "overview",     label: "Overview",     icon: Layers },
-  { id: "assignment",   label: "Assignment",   icon: Building2 },
-  { id: "tasks",        label: "Tasks",        icon: ListTodo },
-  { id: "documents",    label: "Documents",    icon: FileText },
-  { id: "appointments", label: "Appointments", icon: CalendarDays },
-  { id: "billing",      label: "Billing",      icon: IndianRupee },
-  { id: "settlements",  label: "Settlements",  icon: Banknote },
-  { id: "timeline",     label: "Timeline",     icon: GitBranch },
-  { id: "notes",        label: "Notes",        icon: StickyNote },
+  { id: "overview",     label: "Overview",        icon: Layers },
+  { id: "patient_info", label: "Patient Info",     icon: UserCog },
+  { id: "assignment",   label: "Assignment",       icon: Building2 },
+  { id: "tasks",        label: "Tasks",            icon: ListTodo },
+  { id: "documents",    label: "Documents",        icon: FileText },
+  { id: "appointments", label: "Appointments",     icon: CalendarDays },
+  { id: "billing",      label: "Billing",          icon: IndianRupee },
+  { id: "settlements",  label: "Settlements",      icon: Banknote },
+  { id: "timeline",     label: "Timeline",         icon: GitBranch },
+  { id: "notes",        label: "Notes",            icon: StickyNote },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -94,6 +96,10 @@ const CoordinatorCaseDetail = () => {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [newStage, setNewStage] = useState("");
   const [assignHospitalId, setAssignHospitalId] = useState<string>("");
+
+  // Overview editing
+  const [overviewEdit, setOverviewEdit] = useState(false);
+  const [overviewDraft, setOverviewDraft] = useState({ specialty_id: "", priority: "", description: "" });
 
   // ── Data queries ─────────────────────────────────────────────────────────
 
@@ -121,6 +127,15 @@ const CoordinatorCaseDetail = () => {
         .single();
       return data;
     },
+  });
+
+  const { data: specialties = [] } = useQuery({
+    queryKey: ["specialties-list"],
+    queryFn: async () => {
+      const { data } = await supabase.from("specialties").select("id, name").order("name");
+      return data ?? [];
+    },
+    staleTime: Infinity,
   });
 
   const { data: hospitals = [] } = useQuery({
@@ -235,6 +250,35 @@ const CoordinatorCaseDetail = () => {
   });
 
 
+
+  const overviewMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("patient_cases")
+        .update({
+          specialty_id: overviewDraft.specialty_id || null,
+          priority: overviewDraft.priority || null,
+          description: overviewDraft.description || null,
+        })
+        .eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["case-detail", id] });
+      setOverviewEdit(false);
+      toast({ title: "Case info updated" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const startOverviewEdit = () => {
+    setOverviewDraft({
+      specialty_id: caseData?.specialty_id ?? "",
+      priority: caseData?.priority ?? "",
+      description: caseData?.description ?? "",
+    });
+    setOverviewEdit(true);
+  };
 
   // ── Render ───────────────────────────────────────────────────────────────
 
@@ -365,58 +409,107 @@ const CoordinatorCaseDetail = () => {
       {activeTab === "overview" && (
         <div className="grid lg:grid-cols-2 gap-5">
           {/* Case Info */}
-          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-            <h2 className="font-semibold text-foreground">Case Information</h2>
-            <div className="grid grid-cols-2 gap-y-3 text-sm">
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">Specialty</p>
-                <p className="font-medium">{(caseData as any).specialties?.name ?? "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">Priority</p>
-                <p className="font-medium capitalize">{caseData.priority ?? "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">Hospital</p>
-                <p className="font-medium">{assignedHospital?.name ?? "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">Doctor</p>
-                <p className="font-medium">{assignedDoctor?.name ?? "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">Estimated Cost</p>
-                <p className="font-medium">
-                  {caseData.estimated_package_cost
-                    ? `₹${Number(caseData.estimated_package_cost).toLocaleString("en-IN")}`
-                    : "—"}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">Treatment Date</p>
-                <p className="font-medium">
-                  {caseData.expected_treatment_date
-                    ? new Date(caseData.expected_treatment_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
-                    : "—"}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">Consultation</p>
-                <p className="font-medium capitalize">{caseData.consultation_status ?? "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">Payment</p>
-                <p className="font-medium capitalize">{caseData.payment_status ?? "—"}</p>
-              </div>
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-3.5 border-b border-border">
+              <h2 className="font-semibold text-foreground">Case Information</h2>
+              {!overviewEdit ? (
+                <Button variant="ghost" size="sm" onClick={startOverviewEdit} className="h-7 gap-1.5 text-xs">
+                  <Pencil className="h-3 w-3" /> Edit
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setOverviewEdit(false)} className="h-7 text-xs">
+                    <X className="h-3 w-3 mr-1" /> Cancel
+                  </Button>
+                  <Button size="sm" onClick={() => overviewMutation.mutate()} disabled={overviewMutation.isPending} className="h-7 gap-1 text-xs">
+                    {overviewMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />} Save
+                  </Button>
+                </div>
+              )}
             </div>
-            {caseData.description && (
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-y-3 text-sm">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Specialty</p>
+                  {!overviewEdit ? (
+                    <p className="font-medium">{(caseData as any).specialties?.name ?? "—"}</p>
+                  ) : (
+                    <Select value={overviewDraft.specialty_id} onValueChange={v => setOverviewDraft(d => ({ ...d, specialty_id: v }))}>
+                      <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Select specialty…" /></SelectTrigger>
+                      <SelectContent>
+                        {(specialties as any[]).map((s) => (
+                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Priority</p>
+                  {!overviewEdit ? (
+                    <p className="font-medium capitalize">{caseData.priority ?? "—"}</p>
+                  ) : (
+                    <Select value={overviewDraft.priority} onValueChange={v => setOverviewDraft(d => ({ ...d, priority: v }))}>
+                      <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Select priority…" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="urgent">Urgent</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Hospital</p>
+                  <p className="font-medium">{assignedHospital?.name ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Doctor</p>
+                  <p className="font-medium">{assignedDoctor?.name ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Estimated Cost</p>
+                  <p className="font-medium">
+                    {caseData.estimated_package_cost
+                      ? `₹${Number(caseData.estimated_package_cost).toLocaleString("en-IN")}`
+                      : "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Treatment Date</p>
+                  <p className="font-medium">
+                    {caseData.expected_treatment_date
+                      ? new Date(caseData.expected_treatment_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+                      : "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Consultation</p>
+                  <p className="font-medium capitalize">{caseData.consultation_status ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Payment</p>
+                  <p className="font-medium capitalize">{caseData.payment_status ?? "—"}</p>
+                </div>
+              </div>
               <div className="pt-3 border-t border-border">
                 <p className="text-xs text-muted-foreground mb-1">Description</p>
-                <p className="text-sm text-muted-foreground leading-relaxed">{caseData.description}</p>
+                {!overviewEdit ? (
+                  <p className="text-sm text-muted-foreground leading-relaxed">{caseData.description ?? "—"}</p>
+                ) : (
+                  <Textarea
+                    value={overviewDraft.description}
+                    onChange={e => setOverviewDraft(d => ({ ...d, description: e.target.value }))}
+                    rows={3}
+                    placeholder="Case description…"
+                    className="resize-none text-sm"
+                  />
+                )}
               </div>
-            )}
-            <div className="pt-3 border-t border-border text-xs text-muted-foreground">
-              Created: {new Date(caseData.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
+              <div className="pt-3 border-t border-border text-xs text-muted-foreground">
+                Created: {new Date(caseData.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
+              </div>
             </div>
           </div>
 
@@ -490,6 +583,11 @@ const CoordinatorCaseDetail = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Patient Info Tab ──────────────────────────────────────────────── */}
+      {activeTab === "patient_info" && (
+        <CasePatientInfo caseId={id!} leadId={caseData.lead_id} leadData={leadData} />
       )}
 
       {/* ── Assignment Tab ────────────────────────────────────────────────── */}
