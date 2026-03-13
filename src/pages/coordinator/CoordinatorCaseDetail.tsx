@@ -669,7 +669,7 @@ const CoordinatorCaseDetail = () => {
       {activeTab === "billing" && <CaseBilling caseId={id!} />}
 
       {/* ── Settlements Tab ───────────────────────────────────────────────── */}
-      {activeTab === "settlements" && <CaseSettlements caseId={id!} />}
+      {activeTab === "settlements" && <CaseSettlements caseId={id!} caseHospitalId={caseData.hospital_id ?? undefined} />}
 
       {/* ── Timeline Tab ─────────────────────────────────────────────────── */}
       {activeTab === "timeline" && (

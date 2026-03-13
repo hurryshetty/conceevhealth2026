@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { FolderKanban, Clock, CheckCircle2, AlertCircle, ArrowRight } from "lucide-react";
+import { FolderKanban, Clock, CheckCircle2, AlertCircle, ArrowRight, Banknote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const STATUS_COLOR: Record<string, string> = {
@@ -50,6 +50,26 @@ const HospitalDashboard = () => {
     enabled: !!membership?.hospital_id,
   });
 
+  const caseIds = (cases ?? []).map((c: any) => c.id);
+
+  // Settlements for this hospital's cases
+  const { data: settlements = [] } = useQuery({
+    queryKey: ["hospital-settlements", membership?.hospital_id],
+    queryFn: async () => {
+      if (!caseIds.length) return [];
+      const { data } = await supabase
+        .from("settlements")
+        .select("id, amount, status, settled_at, payment_method, payment_reference, case_id")
+        .in("case_id", caseIds)
+        .order("created_at", { ascending: false });
+      return data ?? [];
+    },
+    enabled: caseIds.length > 0,
+  });
+
+  const settlementPending = (settlements as any[]).filter((s) => ["pending","processing"].includes(s.status)).reduce((sum, s) => sum + Number(s.amount), 0);
+  const settlementPaid    = (settlements as any[]).filter((s) => s.status === "paid").reduce((sum, s) => sum + Number(s.amount), 0);
+
   const stats = {
     total: cases.length,
     new: cases.filter((c: any) => c.status === "new").length,
@@ -82,6 +102,43 @@ const HospitalDashboard = () => {
           </div>
         ))}
       </div>
+
+      {/* Settlements summary */}
+      {settlements.length > 0 && (
+        <div className="bg-card border border-border rounded-xl p-5 mb-6">
+          <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Banknote className="h-4 w-4 text-muted-foreground" /> Settlement Payments
+          </h2>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-3 text-center">
+              <p className="text-xs text-yellow-700 mb-1">Pending / Processing</p>
+              <p className="text-lg font-bold text-yellow-700">₹{settlementPending.toLocaleString("en-IN")}</p>
+            </div>
+            <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 text-center">
+              <p className="text-xs text-emerald-700 mb-1">Total Received</p>
+              <p className="text-lg font-bold text-emerald-700">₹{settlementPaid.toLocaleString("en-IN")}</p>
+            </div>
+          </div>
+          <div className="divide-y divide-border">
+            {(settlements as any[]).slice(0, 5).map((s) => {
+              const statusColor = s.status === "paid" ? "bg-emerald-100 text-emerald-700" : s.status === "processing" ? "bg-blue-100 text-blue-700" : "bg-yellow-100 text-yellow-700";
+              return (
+                <div key={s.id} className="flex items-center justify-between py-2.5 text-sm">
+                  <div>
+                    <span className="font-semibold text-foreground">₹{Number(s.amount).toLocaleString("en-IN")}</span>
+                    {s.payment_method && <span className="text-xs text-muted-foreground ml-2">via {s.payment_method.replace("_", " ")}</span>}
+                    {s.payment_reference && <span className="text-xs text-muted-foreground ml-1">· Ref: {s.payment_reference}</span>}
+                    {s.settled_at && <span className="text-xs text-muted-foreground ml-2">{new Date(s.settled_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>}
+                  </div>
+                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${statusColor}`}>
+                    {s.status.charAt(0).toUpperCase() + s.status.slice(1)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         <div className="flex items-center justify-between p-5 border-b border-border">
