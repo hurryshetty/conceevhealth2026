@@ -70,7 +70,7 @@ export const CaseAppointments = ({ caseId }: Props) => {
     queryFn: async () => {
       const { data } = await supabase
         .from("doctors")
-        .select("id, name, specialty, hospitals")
+        .select("id, name, designation, hospitals")
         .eq("is_published", true)
         .order("name");
       return data ?? [];
@@ -233,7 +233,7 @@ export const CaseAppointments = ({ caseId }: Props) => {
           <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
             {doctor && (
               <span className="flex items-center gap-1">
-                <UserRound className="h-3 w-3" /> Dr. {doctor.name}{doctor.specialty ? ` (${doctor.specialty})` : ""}
+                <UserRound className="h-3 w-3" /> Dr. {doctor.name}{doctor.designation ? ` (${doctor.designation})` : ""}
               </span>
             )}
             {hospitalName && (
@@ -412,7 +412,7 @@ export const CaseAppointments = ({ caseId }: Props) => {
                 <SelectContent>
                   {filteredDoctors.map((d: any) => (
                     <SelectItem key={d.id} value={d.id}>
-                      {d.name}{d.specialty ? ` — ${d.specialty}` : ""}
+                      {d.name}{d.designation ? ` — ${d.designation}` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
