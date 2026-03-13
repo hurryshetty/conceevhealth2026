@@ -60,7 +60,7 @@ const DoctorDashboard = () => {
     <div>
       <div className="mb-6">
         <h1 className="font-serif text-3xl font-bold text-foreground">
-          {doctorRecord ? `Dr. ${doctorRecord.name}` : "Doctor Dashboard"}
+          {doctorRecord ? doctorRecord.name : "Doctor Dashboard"}
         </h1>
         {doctorRecord?.designation && (
           <p className="text-muted-foreground mt-1">{doctorRecord.designation}</p>
