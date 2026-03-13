@@ -34,7 +34,7 @@ export const DoctorCaseDetail = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_cases")
-        .select("*, specialties(name), hospitals(name)")
+        .select("*, specialties(name), locations(name)")
         .eq("id", id!)
         .single();
       if (error) throw error;
@@ -96,7 +96,7 @@ export const DoctorCaseDetail = () => {
             {caseData.description && <p className="text-muted-foreground text-sm">{caseData.description}</p>}
             <div className="grid grid-cols-2 gap-3 mt-4 text-sm">
               <div><span className="text-muted-foreground">Specialty:</span> <span className="font-medium">{caseData.specialties?.name ?? "—"}</span></div>
-              <div><span className="text-muted-foreground">Hospital:</span> <span className="font-medium">{caseData.hospitals?.name ?? "—"}</span></div>
+              <div><span className="text-muted-foreground">Hospital:</span> <span className="font-medium">{caseData.locations?.name ?? "—"}</span></div>
               {caseData.estimated_cost && (
                 <div><span className="text-muted-foreground">Est. Cost:</span> <span className="font-medium">₹{caseData.estimated_cost.toLocaleString("en-IN")}</span></div>
               )}
@@ -160,7 +160,7 @@ const DoctorCases = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_cases")
-        .select("*, specialties(name), hospitals(name)")
+        .select("*, specialties(name), locations(name)")
         .eq("doctor_id", doctorRecord!.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -193,7 +193,7 @@ const DoctorCases = () => {
                   </div>
                   <p className="text-sm font-medium text-foreground">{c.title}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {c.specialties?.name}{c.hospitals?.name ? ` • ${c.hospitals.name}` : ""}
+                    {c.specialties?.name}{c.locations?.name ? ` • ${c.locations.name}` : ""}
                   </p>
                 </div>
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />

@@ -27,7 +27,7 @@ const HospitalDashboard = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("hospital_members")
-        .select("hospital_id, hospitals(name, city)")
+        .select("hospital_id, locations(name, cities(name))")
         .eq("user_id", user!.id)
         .maybeSingle();
       return data;
@@ -81,9 +81,9 @@ const HospitalDashboard = () => {
     <div>
       <div className="mb-6">
         <h1 className="font-serif text-3xl font-bold text-foreground">
-          {(membership as any)?.hospitals?.name ?? "Hospital Dashboard"}
+          {(membership as any)?.locations?.name ?? "Hospital Dashboard"}
         </h1>
-        <p className="text-muted-foreground mt-1">{(membership as any)?.hospitals?.city}</p>
+        <p className="text-muted-foreground mt-1">{(membership as any)?.locations?.cities?.name}</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

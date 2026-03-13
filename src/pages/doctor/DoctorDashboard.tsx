@@ -27,7 +27,7 @@ const DoctorDashboard = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("doctors")
-        .select("id, name, specialty")
+        .select("id, name, designation")
         .eq("user_id", user!.id)
         .maybeSingle();
       return data;
@@ -40,7 +40,7 @@ const DoctorDashboard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_cases")
-        .select("*, specialties(name), hospitals(name)")
+        .select("*, specialties(name), locations(name)")
         .eq("doctor_id", doctorRecord!.id)
         .order("created_at", { ascending: false })
         .limit(10);
@@ -62,8 +62,8 @@ const DoctorDashboard = () => {
         <h1 className="font-serif text-3xl font-bold text-foreground">
           {doctorRecord ? `Dr. ${doctorRecord.name}` : "Doctor Dashboard"}
         </h1>
-        {doctorRecord?.specialty && (
-          <p className="text-muted-foreground mt-1">{doctorRecord.specialty}</p>
+        {doctorRecord?.designation && (
+          <p className="text-muted-foreground mt-1">{doctorRecord.designation}</p>
         )}
       </div>
 
@@ -110,7 +110,7 @@ const DoctorDashboard = () => {
                   </div>
                   <p className="text-sm font-medium text-foreground">{c.title}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {c.hospitals?.name ?? "—"}
+                    {c.locations?.name ?? "—"}
                   </p>
                 </div>
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
