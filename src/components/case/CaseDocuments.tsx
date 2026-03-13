@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, FileText, Download, CheckCircle2, Clock, Trash2, Loader2 } from "lucide-react";
+import { Upload, FileText, Download, Eye, CheckCircle2, Clock, Trash2, Loader2 } from "lucide-react";
 import { addTimelineEntry } from "@/lib/caseService";
 
 const DOC_TYPES = [
@@ -129,6 +129,13 @@ export const CaseDocuments = ({ caseId }: Props) => {
     }
   };
 
+  const handleView = async (filePath: string) => {
+    const { data } = await supabase.storage
+      .from("case-documents")
+      .createSignedUrl(filePath, 300);
+    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+  };
+
   const handleDownload = async (filePath: string, fileName: string) => {
     const { data } = await supabase.storage
       .from("case-documents")
@@ -226,6 +233,13 @@ export const CaseDocuments = ({ caseId }: Props) => {
                 {doc.notes && <p className="text-xs text-muted-foreground mt-0.5 italic">{doc.notes}</p>}
               </div>
               <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => handleView(doc.file_path)}
+                  title="View"
+                  className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                </button>
                 <button
                   onClick={() => handleDownload(doc.file_path, doc.file_name)}
                   title="Download"
