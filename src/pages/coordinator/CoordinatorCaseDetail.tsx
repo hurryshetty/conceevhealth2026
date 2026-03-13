@@ -22,6 +22,7 @@ import { CaseDocuments } from "@/components/case/CaseDocuments";
 import { CaseAppointments } from "@/components/case/CaseAppointments";
 import { CaseBilling } from "@/components/case/CaseBilling";
 import { CaseTasks } from "@/components/case/CaseTasks";
+import { CaseNotes } from "@/components/case/CaseNotes";
 import { CaseSettlements } from "@/components/case/CaseSettlements";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -91,8 +92,6 @@ const CoordinatorCaseDetail = () => {
   const qc = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<TabId>("overview");
-  const [noteText, setNoteText] = useState("");
-  const [isInternal, setIsInternal] = useState(false);
   const [newStage, setNewStage] = useState("");
   const [assignHospitalId, setAssignHospitalId] = useState<string>("");
 
@@ -178,17 +177,6 @@ const CoordinatorCaseDetail = () => {
     },
   });
 
-  const { data: notes = [] } = useQuery({
-    queryKey: ["case-notes", id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("case_notes")
-        .select("*")
-        .eq("case_id", id!)
-        .order("created_at", { ascending: true });
-      return data ?? [];
-    },
-  });
 
   // ── Mutations ────────────────────────────────────────────────────────────
 
@@ -247,30 +235,6 @@ const CoordinatorCaseDetail = () => {
   });
 
 
-  const addNoteMutation = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from("case_notes").insert({
-        case_id: id!,
-        author_id: user!.id,
-        content: noteText,
-        is_internal: isInternal,
-      });
-      if (error) throw error;
-      await addTimelineEntry(
-        id!,
-        "note_added",
-        isInternal ? "Internal note added" : "Note added",
-        user!.id,
-      );
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["case-notes", id] });
-      qc.invalidateQueries({ queryKey: ["case-timeline", id] });
-      setNoteText("");
-      toast({ title: "Note added" });
-    },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
-  });
 
   // ── Render ───────────────────────────────────────────────────────────────
 
@@ -708,71 +672,7 @@ const CoordinatorCaseDetail = () => {
       )}
 
       {/* ── Notes Tab ────────────────────────────────────────────────────── */}
-      {activeTab === "notes" && (
-        <div className="max-w-2xl space-y-4">
-          <div className="space-y-3">
-            {notes.length === 0 ? (
-              <p className="text-muted-foreground text-sm py-6 text-center">No notes yet.</p>
-            ) : (
-              (notes as any[]).map((note) => (
-                <div
-                  key={note.id}
-                  className={`p-4 rounded-xl text-sm border ${
-                    note.is_internal
-                      ? "bg-yellow-50 border-yellow-200"
-                      : "bg-card border-border"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="font-medium text-foreground">{"Coordinator"}</span>
-                    {note.is_internal && (
-                      <span className="inline-flex items-center gap-1 text-[11px] text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-full">
-                        <Lock className="h-3 w-3" /> Internal
-                      </span>
-                    )}
-                    <span className="text-xs text-muted-foreground ml-auto">
-                      {new Date(note.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                    </span>
-                  </div>
-                  <p className="text-muted-foreground leading-relaxed">{note.content}</p>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Add Note */}
-          <div className="bg-card border border-border rounded-xl p-5 space-y-3">
-            <h3 className="font-semibold text-foreground text-sm">Add Note</h3>
-            <Textarea
-              placeholder="Add update, follow-up note, patient response…"
-              value={noteText}
-              onChange={(e) => setNoteText(e.target.value)}
-              rows={4}
-              className="resize-none"
-            />
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isInternal}
-                  onChange={(e) => setIsInternal(e.target.checked)}
-                  className="rounded"
-                />
-                Internal only (not visible to patient)
-              </label>
-              <Button
-                size="sm"
-                onClick={() => addNoteMutation.mutate()}
-                disabled={!noteText.trim() || addNoteMutation.isPending}
-                className="gap-2"
-              >
-                {addNoteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                Add Note
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {activeTab === "notes" && <CaseNotes caseId={id!} />}
     </div>
   );
 };
