@@ -16,11 +16,12 @@ import {
   FileText, Banknote,
 } from "lucide-react";
 import {
-  assignCase, updateCaseStage, updateTaskStatus, addTimelineEntry,
+  assignCase, updateCaseStage, addTimelineEntry,
 } from "@/lib/caseService";
 import { CaseDocuments } from "@/components/case/CaseDocuments";
 import { CaseAppointments } from "@/components/case/CaseAppointments";
 import { CaseBilling } from "@/components/case/CaseBilling";
+import { CaseTasks } from "@/components/case/CaseTasks";
 import { CaseSettlements } from "@/components/case/CaseSettlements";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -65,18 +66,6 @@ const STAGE_COLOR: Record<string, string> = {
   escalated:              "bg-rose-100 text-rose-700",
 };
 
-const TASK_STATUS_CYCLE: Record<string, string> = {
-  pending:     "in_progress",
-  in_progress: "completed",
-  completed:   "pending",
-};
-
-const TASK_PRIORITY_COLOR: Record<string, string> = {
-  low:      "bg-gray-100 text-gray-600",
-  medium:   "bg-yellow-100 text-yellow-700",
-  high:     "bg-red-100 text-red-700",
-  critical: "bg-rose-200 text-rose-800 font-bold",
-};
 
 type TabId = "overview" | "assignment" | "tasks" | "timeline" | "notes" | "documents" | "appointments" | "billing" | "settlements";
 
@@ -105,8 +94,6 @@ const CoordinatorCaseDetail = () => {
   const [noteText, setNoteText] = useState("");
   const [isInternal, setIsInternal] = useState(false);
   const [newStage, setNewStage] = useState("");
-  const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [addingTask, setAddingTask] = useState(false);
   const [assignHospitalId, setAssignHospitalId] = useState<string>("");
 
   // ── Data queries ─────────────────────────────────────────────────────────
@@ -259,33 +246,6 @@ const CoordinatorCaseDetail = () => {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  const taskStatusMutation = useMutation({
-    mutationFn: async ({ taskId, status }: { taskId: string; status: string }) => {
-      await updateTaskStatus(taskId, status);
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["case-tasks", id] }),
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
-  });
-
-  const addTaskMutation = useMutation({
-    mutationFn: async (title: string) => {
-      const { error } = await supabase.from("case_tasks").insert({
-        case_id: id!,
-        task_title: title,
-        assigned_to: user!.id,
-        priority: "medium",
-        sort_order: tasks.length + 1,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["case-tasks", id] });
-      setNewTaskTitle("");
-      setAddingTask(false);
-      toast({ title: "Task added" });
-    },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
-  });
 
   const addNoteMutation = useMutation({
     mutationFn: async () => {
@@ -697,79 +657,7 @@ const CoordinatorCaseDetail = () => {
       )}
 
       {/* ── Tasks Tab ────────────────────────────────────────────────────── */}
-      {activeTab === "tasks" && (
-        <div className="max-w-2xl space-y-3">
-          {(tasks as any[]).map((task) => (
-            <div key={task.id} className="bg-card border border-border rounded-xl p-4 flex items-start gap-3">
-              <button
-                onClick={() => taskStatusMutation.mutate({ taskId: task.id, status: TASK_STATUS_CYCLE[task.status] ?? "pending" })}
-                className="mt-0.5 shrink-0"
-                title={`Mark as ${TASK_STATUS_CYCLE[task.status] ?? "pending"}`}
-              >
-                {task.status === "completed"
-                  ? <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                  : task.status === "in_progress"
-                  ? <Clock className="h-5 w-5 text-yellow-500" />
-                  : <Circle className="h-5 w-5 text-muted-foreground/40 hover:text-primary transition-colors" />}
-              </button>
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm font-medium ${task.status === "completed" ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                  {task.task_title}
-                </p>
-                {task.notes && <p className="text-xs text-muted-foreground mt-0.5">{task.notes}</p>}
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${TASK_PRIORITY_COLOR[task.priority] ?? ""}`}>
-                  {task.priority}
-                </span>
-                {task.due_date && (
-                  <span className="text-[11px] text-muted-foreground">
-                    {new Date(task.due_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
-
-          {tasks.length === 0 && !addingTask && (
-            <p className="text-muted-foreground text-sm py-6 text-center">No tasks yet.</p>
-          )}
-
-          {/* Add Task */}
-          {addingTask ? (
-            <div className="bg-card border border-border rounded-xl p-4 flex gap-2">
-              <Input
-                placeholder="Task title…"
-                value={newTaskTitle}
-                onChange={(e) => setNewTaskTitle(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && newTaskTitle.trim()) addTaskMutation.mutate(newTaskTitle.trim());
-                  if (e.key === "Escape") { setAddingTask(false); setNewTaskTitle(""); }
-                }}
-                autoFocus
-                className="rounded-lg text-sm"
-              />
-              <Button
-                size="sm"
-                onClick={() => newTaskTitle.trim() && addTaskMutation.mutate(newTaskTitle.trim())}
-                disabled={!newTaskTitle.trim() || addTaskMutation.isPending}
-              >
-                {addTaskMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add"}
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => { setAddingTask(false); setNewTaskTitle(""); }}>
-                Cancel
-              </Button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setAddingTask(true)}
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors py-2 px-1"
-            >
-              <Plus className="h-4 w-4" /> Add task
-            </button>
-          )}
-        </div>
-      )}
+      {activeTab === "tasks" && <CaseTasks caseId={id!} />}
 
       {/* ── Documents Tab ────────────────────────────────────────────────── */}
       {activeTab === "documents" && <CaseDocuments caseId={id!} />}
