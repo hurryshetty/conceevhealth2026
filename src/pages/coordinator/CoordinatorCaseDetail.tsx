@@ -339,10 +339,16 @@ const CoordinatorCaseDetail = () => {
   const effectiveHospitalId = assignHospitalId || caseData.hospital_id || "";
   const effectiveHospital = (hospitals as any[]).find((h) => h.id === effectiveHospitalId);
   // Filter doctors to those who work at the selected hospital
+  const normH = (s: string) => s.trim().toLowerCase();
   const filteredDoctors = effectiveHospital
-    ? (doctors as any[]).filter((d) =>
-        Array.isArray(d.hospitals) && d.hospitals.includes(effectiveHospital.name)
-      )
+    ? (doctors as any[]).filter((d) => {
+        if (!d.hospitals) return false;
+        const arr: string[] = Array.isArray(d.hospitals) ? d.hospitals : [String(d.hospitals)];
+        return arr.some((h) =>
+          normH(h).startsWith(normH(effectiveHospital.name)) ||
+          normH(effectiveHospital.name).startsWith(normH(h)),
+        );
+      })
     : [];
 
   return (

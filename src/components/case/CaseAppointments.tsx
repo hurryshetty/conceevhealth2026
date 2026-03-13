@@ -97,7 +97,12 @@ export const CaseAppointments = ({ caseId }: Props) => {
     ? (allDoctors as any[]).filter((d) => {
         if (!d.hospitals) return false;
         const arr: string[] = Array.isArray(d.hospitals) ? d.hospitals : [String(d.hospitals)];
-        return arr.some((h) => normalise(h) === normalise(selectedHospitalName));
+        // Doctors store "Hospital Name City", locations store "Hospital Name"
+        // so check if either starts with the other (handles both exact and city-suffixed)
+        return arr.some((h) =>
+          normalise(h).startsWith(normalise(selectedHospitalName)) ||
+          normalise(selectedHospitalName).startsWith(normalise(h)),
+        );
       })
     : [];
 
