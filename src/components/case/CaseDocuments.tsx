@@ -51,7 +51,7 @@ export const CaseDocuments = ({ caseId }: Props) => {
     queryFn: async () => {
       const { data } = await supabase
         .from("case_documents")
-        .select("*, profiles!uploaded_by(full_name)")
+        .select("*")
         .eq("case_id", caseId)
         .order("created_at", { ascending: false });
       return data ?? [];
@@ -220,7 +220,7 @@ export const CaseDocuments = ({ caseId }: Props) => {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {doc.profiles?.full_name ?? "Unknown"} • {formatSize(doc.file_size)} •{" "}
+                  {formatSize(doc.file_size)}{doc.file_size ? " • " : ""}
                   {new Date(doc.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                 </p>
                 {doc.notes && <p className="text-xs text-muted-foreground mt-0.5 italic">{doc.notes}</p>}
