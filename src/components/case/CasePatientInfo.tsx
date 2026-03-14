@@ -88,7 +88,7 @@ const SectionCard = ({ icon: Icon, title, sectionKey, editSection, onEdit, onSav
               {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />} Save
             </Button>
           </div>
-        )}
+        ) : null}
       </div>
       <div className="p-5">{children}</div>
     </div>

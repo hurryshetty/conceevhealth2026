@@ -70,7 +70,7 @@ const HospitalCases = () => {
                   </div>
                   <p className="text-sm font-medium text-foreground">{c.title}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {c.specialties?.name}{c.doctors?.name ? ` • Dr. ${c.doctors.name}` : ""}
+                    {c.specialties?.name}{c.doctors?.name ? ` • ${c.doctors.name}` : ""}
                   </p>
                 </div>
                 <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
