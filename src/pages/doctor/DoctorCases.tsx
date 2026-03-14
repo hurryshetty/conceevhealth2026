@@ -76,7 +76,7 @@ export const DoctorCaseDetail = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("leads")
-        .select("full_name, phone, city, interest")
+        .select("name, phone, city, procedure_interest")
         .eq("id", caseData!.lead_id)
         .maybeSingle();
       return data;
@@ -134,7 +134,7 @@ export const DoctorCaseDetail = () => {
               <div><p className="text-xs text-muted-foreground mb-0.5">Specialty</p><p className="font-medium">{caseData.specialties?.name ?? "—"}</p></div>
               <div><p className="text-xs text-muted-foreground mb-0.5">Priority</p><p className="font-medium capitalize">{caseData.priority ?? "—"}</p></div>
               <div><p className="text-xs text-muted-foreground mb-0.5">Hospital</p><p className="font-medium">{caseData.locations?.name ?? "—"}</p></div>
-              <div><p className="text-xs text-muted-foreground mb-0.5">Doctor</p><p className="font-medium">{caseData.doctors?.name ? `Dr. ${caseData.doctors.name}` : "—"}</p></div>
+              <div><p className="text-xs text-muted-foreground mb-0.5">Doctor</p><p className="font-medium">{caseData.doctors?.name ?? "—"}</p></div>
               {caseData.estimated_cost && (
                 <div><p className="text-xs text-muted-foreground mb-0.5">Estimated Cost</p><p className="font-medium">₹{Number(caseData.estimated_cost).toLocaleString("en-IN")}</p></div>
               )}
@@ -152,13 +152,13 @@ export const DoctorCaseDetail = () => {
           <div className="bg-card border border-border rounded-xl p-5 h-fit">
             <h2 className="font-semibold text-foreground mb-3">Patient / Lead</h2>
             <div className="space-y-3 text-sm">
-              <div><p className="text-xs text-muted-foreground mb-0.5">Name</p><p className="font-medium">{leadData?.full_name ?? "—"}</p></div>
+              <div><p className="text-xs text-muted-foreground mb-0.5">Name</p><p className="font-medium">{leadData?.name ?? "—"}</p></div>
               <div className="grid grid-cols-2 gap-3">
                 <div><p className="text-xs text-muted-foreground mb-0.5">Phone</p><p className="font-medium text-primary">{leadData?.phone ?? "—"}</p></div>
                 <div><p className="text-xs text-muted-foreground mb-0.5">City</p><p className="font-medium">{leadData?.city ?? "—"}</p></div>
               </div>
-              {leadData?.interest && (
-                <div><p className="text-xs text-muted-foreground mb-0.5">Procedure Interest</p><p className="font-medium">{leadData.interest}</p></div>
+              {leadData?.procedure_interest && (
+                <div><p className="text-xs text-muted-foreground mb-0.5">Procedure Interest</p><p className="font-medium">{leadData.procedure_interest}</p></div>
               )}
             </div>
           </div>
