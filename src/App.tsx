@@ -75,6 +75,9 @@ import PatientCases from "./pages/patient/PatientCases";
 import PatientCaseDetail from "./pages/patient/PatientCaseDetail";
 import PatientNewCase from "./pages/patient/PatientNewCase";
 
+// Profile
+import ProfileSettings from "./pages/profile/ProfileSettings";
+
 const queryClient = new QueryClient();
 
 const ScrollToTop = () => {
@@ -130,6 +133,7 @@ const App = () => (
             <Route path="users" element={<AdminUsers />} />
             <Route path="verification" element={<AdminVerification />} />
             <Route path="settings" element={<AdminSettings />} />
+            <Route path="profile" element={<ProfileSettings />} />
           </Route>
 
           {/* Coordinator */}
@@ -146,6 +150,7 @@ const App = () => (
             <Route path="cases" element={<CoordinatorCases />} />
             <Route path="cases/:id" element={<CoordinatorCaseDetail />} />
             <Route path="messages" element={<CoordinatorMessages />} />
+            <Route path="profile" element={<ProfileSettings />} />
           </Route>
 
           {/* Hospital */}
@@ -161,6 +166,7 @@ const App = () => (
             <Route path="cases" element={<HospitalCases />} />
             <Route path="cases/:id" element={<HospitalCaseDetail />} />
             <Route path="staff" element={<HospitalStaff />} />
+            <Route path="profile" element={<ProfileSettings />} />
           </Route>
 
           {/* Doctor */}
@@ -175,6 +181,7 @@ const App = () => (
             <Route index element={<DoctorDashboard />} />
             <Route path="cases" element={<DoctorCases />} />
             <Route path="cases/:id" element={<DoctorCaseDetail />} />
+            <Route path="profile" element={<ProfileSettings />} />
           </Route>
 
           {/* Patient */}
@@ -190,6 +197,7 @@ const App = () => (
             <Route path="cases" element={<PatientCases />} />
             <Route path="cases/:id" element={<PatientCaseDetail />} />
             <Route path="new-case" element={<PatientNewCase />} />
+            <Route path="profile" element={<ProfileSettings />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />
