@@ -1,26 +1,27 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, Layers, UserCog, FileText, CalendarDays, StickyNote } from "lucide-react";
+import { ArrowLeft, Layers, UserCog, FileText, CalendarDays, IndianRupee, Banknote, StickyNote } from "lucide-react";
 import { CasePatientInfo } from "@/components/case/CasePatientInfo";
 import { CaseDocuments } from "@/components/case/CaseDocuments";
 import { CaseAppointments } from "@/components/case/CaseAppointments";
+import { CaseBilling } from "@/components/case/CaseBilling";
+import { CaseSettlements } from "@/components/case/CaseSettlements";
 import { CaseNotes } from "@/components/case/CaseNotes";
 
-const STATUS_COLOR: Record<string, string> = {
-  new: "bg-blue-100 text-blue-700",
-  assigned: "bg-purple-100 text-purple-700",
-  in_progress: "bg-yellow-100 text-yellow-700",
-  awaiting_docs: "bg-orange-100 text-orange-700",
-  under_review: "bg-indigo-100 text-indigo-700",
-  approved: "bg-green-100 text-green-700",
-  completed: "bg-emerald-100 text-emerald-700",
-  rejected: "bg-red-100 text-red-700",
-  cancelled: "bg-gray-100 text-gray-600",
-};
+type TabId = "overview" | "patient_info" | "documents" | "appointments" | "billing" | "settlements" | "notes";
+
+const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
+  { id: "overview",     label: "Overview",     icon: Layers },
+  { id: "patient_info", label: "Patient Info",  icon: UserCog },
+  { id: "documents",    label: "Documents",     icon: FileText },
+  { id: "appointments", label: "Appointments",  icon: CalendarDays },
+  { id: "billing",      label: "Billing",       icon: IndianRupee },
+  { id: "settlements",  label: "Settlements",   icon: Banknote },
+  { id: "notes",        label: "Notes",         icon: StickyNote },
+];
 
 const STAGE_COLOR: Record<string, string> = {
   case_created: "bg-blue-100 text-blue-700",
@@ -42,24 +43,13 @@ const STAGE_COLOR: Record<string, string> = {
   escalated: "bg-rose-100 text-rose-700",
 };
 
-type DoctorTabId = "overview" | "patient_info" | "documents" | "appointments" | "notes";
-
-const DOCTOR_TABS: { id: DoctorTabId; label: string; icon: React.ElementType }[] = [
-  { id: "overview",     label: "Overview",    icon: Layers },
-  { id: "patient_info", label: "Patient Info", icon: UserCog },
-  { id: "documents",    label: "Documents",    icon: FileText },
-  { id: "appointments", label: "Appointments", icon: CalendarDays },
-  { id: "notes",        label: "Notes",        icon: StickyNote },
-];
-
-// Case Detail view for doctors
-export const DoctorCaseDetail = () => {
-  const { id } = useParams();
+const HospitalCaseDetail = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<DoctorTabId>("overview");
+  const [activeTab, setActiveTab] = useState<TabId>("overview");
 
   const { data: caseData, isLoading } = useQuery({
-    queryKey: ["doctor-case-detail", id],
+    queryKey: ["hospital-case-detail", id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_cases")
@@ -72,7 +62,7 @@ export const DoctorCaseDetail = () => {
   });
 
   const { data: leadData } = useQuery({
-    queryKey: ["doctor-case-lead", caseData?.lead_id],
+    queryKey: ["hospital-case-lead", caseData?.lead_id],
     queryFn: async () => {
       const { data } = await supabase
         .from("leads")
@@ -85,21 +75,21 @@ export const DoctorCaseDetail = () => {
   });
 
   if (isLoading) return <p className="text-muted-foreground p-6">Loading...</p>;
-  if (!caseData) return <p className="text-muted-foreground p-6">Case not found</p>;
+  if (!caseData) return <p className="text-muted-foreground p-6">Case not found.</p>;
 
   const stageLabel = caseData.case_stage?.replace(/_/g, " ") ?? caseData.status?.replace(/_/g, " ");
 
   return (
     <div>
-      <Button variant="ghost" onClick={() => navigate("/doctor/cases")} className="gap-2 mb-4 -ml-2">
-        <ArrowLeft className="h-4 w-4" /> Back
+      <Button variant="ghost" onClick={() => navigate("/hospital/cases")} className="gap-2 mb-4 -ml-2">
+        <ArrowLeft className="h-4 w-4" /> Back to Cases
       </Button>
 
       <div className="mb-4">
         <p className="text-xs font-mono text-muted-foreground mb-1">{caseData.case_number}</p>
         <div className="flex items-center gap-3 flex-wrap">
           <h1 className="font-serif text-2xl font-bold text-foreground">{caseData.title}</h1>
-          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STAGE_COLOR[caseData.case_stage ?? ""] || STATUS_COLOR[caseData.status] || "bg-gray-100 text-gray-600"}`}>
+          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STAGE_COLOR[caseData.case_stage ?? ""] || "bg-gray-100 text-gray-600"}`}>
             {stageLabel}
           </span>
           {caseData.priority && (
@@ -110,7 +100,7 @@ export const DoctorCaseDetail = () => {
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-border mb-6 overflow-x-auto">
-        {DOCTOR_TABS.map(({ id: tabId, label, icon: Icon }) => (
+        {TABS.map(({ id: tabId, label, icon: Icon }) => (
           <button
             key={tabId}
             onClick={() => setActiveTab(tabId)}
@@ -126,6 +116,7 @@ export const DoctorCaseDetail = () => {
         ))}
       </div>
 
+      {/* Tab content */}
       {activeTab === "overview" && (
         <div className="grid lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 bg-card border border-border rounded-xl p-5 space-y-4">
@@ -141,6 +132,8 @@ export const DoctorCaseDetail = () => {
               {caseData.treatment_date && (
                 <div><p className="text-xs text-muted-foreground mb-0.5">Treatment Date</p><p className="font-medium">{new Date(caseData.treatment_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p></div>
               )}
+              <div><p className="text-xs text-muted-foreground mb-0.5">Consultation</p><p className="font-medium capitalize">{caseData.consultation_status ?? "Pending"}</p></div>
+              <div><p className="text-xs text-muted-foreground mb-0.5">Payment</p><p className="font-medium capitalize">{caseData.payment_status ?? "Pending"}</p></div>
             </div>
             {caseData.description && (
               <div className="pt-2 border-t border-border">
@@ -148,6 +141,9 @@ export const DoctorCaseDetail = () => {
                 <p className="text-sm text-foreground">{caseData.description}</p>
               </div>
             )}
+            <p className="text-xs text-muted-foreground pt-1 border-t border-border">
+              Created: {new Date(caseData.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
+            </p>
           </div>
           <div className="bg-card border border-border rounded-xl p-5 h-fit">
             <h2 className="font-semibold text-foreground mb-3">Patient / Lead</h2>
@@ -177,6 +173,14 @@ export const DoctorCaseDetail = () => {
         <CaseAppointments caseId={id!} />
       )}
 
+      {activeTab === "billing" && (
+        <CaseBilling caseId={id!} />
+      )}
+
+      {activeTab === "settlements" && (
+        <CaseSettlements caseId={id!} caseHospitalId={caseData.hospital_id} readOnly />
+      )}
+
       {activeTab === "notes" && (
         <CaseNotes caseId={id!} />
       )}
@@ -184,69 +188,4 @@ export const DoctorCaseDetail = () => {
   );
 };
 
-// Cases list for doctors
-const DoctorCases = () => {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-
-  const { data: doctorRecord } = useQuery({
-    queryKey: ["doctor-record", user?.id],
-    queryFn: async () => {
-      const { data } = await supabase.from("doctors").select("id").eq("user_id", user!.id).maybeSingle();
-      return data;
-    },
-    enabled: !!user,
-  });
-
-  const { data: cases = [], isLoading } = useQuery({
-    queryKey: ["doctor-cases-all", doctorRecord?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("patient_cases")
-        .select("*, specialties(name), locations(name)")
-        .eq("doctor_id", doctorRecord!.id)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!doctorRecord?.id,
-  });
-
-  return (
-    <div>
-      <h1 className="font-serif text-3xl font-bold text-foreground mb-6">My Cases</h1>
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        {isLoading ? (
-          <p className="text-muted-foreground p-6">Loading...</p>
-        ) : !doctorRecord ? (
-          <p className="text-muted-foreground p-6 text-center">No doctor profile linked. Contact admin.</p>
-        ) : cases.length === 0 ? (
-          <p className="text-muted-foreground p-6 text-center">No cases assigned</p>
-        ) : (
-          <div className="divide-y divide-border">
-            {cases.map((c: any) => (
-              <div key={c.id} className="flex items-center justify-between p-4 hover:bg-accent/50 cursor-pointer"
-                onClick={() => navigate(`/doctor/cases/${c.id}`)}>
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-mono text-muted-foreground">{c.case_number}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[c.status] || ""}`}>
-                      {c.status.replace("_", " ")}
-                    </span>
-                  </div>
-                  <p className="text-sm font-medium text-foreground">{c.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {c.specialties?.name}{c.locations?.name ? ` • ${c.locations.name}` : ""}
-                  </p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-export default DoctorCases;
+export default HospitalCaseDetail;

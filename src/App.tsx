@@ -60,6 +60,7 @@ import CoordinatorMessages from "./pages/coordinator/CoordinatorMessages";
 import HospitalLayout from "./pages/hospital/HospitalLayout";
 import HospitalDashboard from "./pages/hospital/HospitalDashboard";
 import HospitalCases from "./pages/hospital/HospitalCases";
+import HospitalCaseDetail from "./pages/hospital/HospitalCaseDetail";
 import HospitalStaff from "./pages/hospital/HospitalStaff";
 
 // Doctor
@@ -158,6 +159,7 @@ const App = () => (
           >
             <Route index element={<HospitalDashboard />} />
             <Route path="cases" element={<HospitalCases />} />
+            <Route path="cases/:id" element={<HospitalCaseDetail />} />
             <Route path="staff" element={<HospitalStaff />} />
           </Route>
 

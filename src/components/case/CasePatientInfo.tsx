@@ -62,10 +62,11 @@ interface SectionProps {
   onSave: (k: string) => void;
   onCancel: (k: string) => void;
   saving: boolean;
+  readOnly?: boolean;
   children: React.ReactNode;
 }
 
-const SectionCard = ({ icon: Icon, title, sectionKey, editSection, onEdit, onSave, onCancel, saving, children }: SectionProps) => {
+const SectionCard = ({ icon: Icon, title, sectionKey, editSection, onEdit, onSave, onCancel, saving, readOnly, children }: SectionProps) => {
   const isEditing = editSection === sectionKey;
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
@@ -74,11 +75,11 @@ const SectionCard = ({ icon: Icon, title, sectionKey, editSection, onEdit, onSav
           <Icon className="h-4 w-4 text-muted-foreground" />
           <h3 className="font-semibold text-foreground text-sm">{title}</h3>
         </div>
-        {!isEditing ? (
+        {!readOnly && !isEditing ? (
           <Button variant="ghost" size="sm" onClick={() => onEdit(sectionKey)} className="h-7 gap-1.5 text-xs">
             <Pencil className="h-3 w-3" /> Edit
           </Button>
-        ) : (
+        ) : !readOnly && isEditing ? (
           <div className="flex gap-2">
             <Button variant="ghost" size="sm" onClick={() => onCancel(sectionKey)} className="h-7 text-xs">
               <X className="h-3 w-3 mr-1" /> Cancel
@@ -96,11 +97,11 @@ const SectionCard = ({ icon: Icon, title, sectionKey, editSection, onEdit, onSav
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-interface Props { caseId: string; leadId?: string | null; leadData?: any }
+interface Props { caseId: string; leadId?: string | null; leadData?: any; readOnly?: boolean }
 
 type FormState = Record<string, any>;
 
-export const CasePatientInfo = ({ caseId, leadId, leadData }: Props) => {
+export const CasePatientInfo = ({ caseId, leadId, leadData, readOnly }: Props) => {
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -227,7 +228,7 @@ export const CasePatientInfo = ({ caseId, leadId, leadData }: Props) => {
 
   const saving = saveMutation.isPending;
 
-  const sProps = { editSection, onEdit: handleEdit, onSave: handleSave, onCancel: handleCancel, saving };
+  const sProps = { editSection, onEdit: handleEdit, onSave: handleSave, onCancel: handleCancel, saving, readOnly };
 
   if (isLoading) {
     return (

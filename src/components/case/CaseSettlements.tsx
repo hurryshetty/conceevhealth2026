@@ -40,6 +40,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 interface Props {
   caseId: string;
   caseHospitalId?: string;   // pre-select hospital from case assignment
+  readOnly?: boolean;
 }
 
 const emptyForm = {
@@ -53,7 +54,7 @@ const emptyForm = {
   notes: "",
 };
 
-export const CaseSettlements = ({ caseId, caseHospitalId }: Props) => {
+export const CaseSettlements = ({ caseId, caseHospitalId, readOnly }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -477,14 +478,14 @@ export const CaseSettlements = ({ caseId, caseHospitalId }: Props) => {
             </Button>
           </div>
         </div>
-      ) : (
+      ) : !readOnly ? (
         <button
           onClick={() => setShowForm(true)}
           className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors py-2 px-1"
         >
           <Plus className="h-4 w-4" /> Add settlement
         </button>
-      )}
+      ) : null}
 
       {/* Settlement list */}
       {settlements.length === 0 && !showForm ? (

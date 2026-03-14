@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
 
 const STATUS_COLOR: Record<string, string> = {
   new: "bg-blue-100 text-blue-700",
@@ -16,6 +18,7 @@ const STATUS_COLOR: Record<string, string> = {
 
 const HospitalCases = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const { data: membership } = useQuery({
     queryKey: ["hospital-membership", user?.id],
@@ -55,7 +58,8 @@ const HospitalCases = () => {
         ) : (
           <div className="divide-y divide-border">
             {cases.map((c: any) => (
-              <div key={c.id} className="flex items-center justify-between p-4">
+              <div key={c.id} className="flex items-center justify-between p-4 hover:bg-accent/50 cursor-pointer"
+                onClick={() => navigate(`/hospital/cases/${c.id}`)}>
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-mono text-muted-foreground">{c.case_number}</span>
@@ -69,6 +73,7 @@ const HospitalCases = () => {
                     {c.specialties?.name}{c.doctors?.name ? ` • Dr. ${c.doctors.name}` : ""}
                   </p>
                 </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
               </div>
             ))}
           </div>

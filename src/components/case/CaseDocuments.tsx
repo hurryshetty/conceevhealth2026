@@ -34,9 +34,9 @@ const DOC_TYPE_COLOR: Record<string, string> = {
   other:             "bg-gray-100 text-gray-600",
 };
 
-interface Props { caseId: string }
+interface Props { caseId: string; readOnly?: boolean }
 
-export const CaseDocuments = ({ caseId }: Props) => {
+export const CaseDocuments = ({ caseId, readOnly }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -157,7 +157,7 @@ export const CaseDocuments = ({ caseId }: Props) => {
   return (
     <div className="max-w-2xl space-y-4">
       {/* Upload form */}
-      <div className="bg-card border border-border rounded-xl p-5 space-y-3">
+      {!readOnly && <div className="bg-card border border-border rounded-xl p-5 space-y-3">
         <h3 className="font-semibold text-foreground text-sm">Upload Document</h3>
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -200,7 +200,7 @@ export const CaseDocuments = ({ caseId }: Props) => {
           </Button>
           <p className="text-xs text-muted-foreground">PDF, JPG, PNG, DOC, XLS up to 10 MB</p>
         </div>
-      </div>
+      </div>}
 
       {/* Document list */}
       {documents.length === 0 ? (
