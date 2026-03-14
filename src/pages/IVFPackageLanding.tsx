@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
@@ -241,8 +241,8 @@ const IVFPackageLanding = () => {
                   {/* Main image */}
                   <div className="rounded-3xl overflow-hidden shadow-2xl aspect-[4/5]">
                     <img
-                      src="https://images.unsplash.com/photo-1492725764893-90b379c2b6e7?w=800&q=80"
-                      alt="Happy couple holding their newborn baby — IVF success"
+                      src="/images/ivf-hero-family.jpg.jpeg"
+                      alt="Happy Indian couple holding their newborn baby — IVF success"
                       className="w-full h-full object-cover object-center"
                     />
                     {/* Gradient overlay at bottom */}
