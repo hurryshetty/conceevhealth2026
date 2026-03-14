@@ -24,7 +24,7 @@ import { convertLeadToCase, type LeadForConversion } from "@/lib/caseService";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type LeadType = "patient_enquiry" | "doctor_enquiry" | "hospital_enquiry" | "career_enquiry";
+type LeadType = "patient_enquiry" | "doctor_enquiry" | "hospital_enquiry" | "career_enquiry" | "cases";
 type CRMStatus = "new" | "contacted" | "follow_up" | "interested" | "not_interested" | "converted" | "closed";
 type Priority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
@@ -32,6 +32,7 @@ interface LinkedCase {
   id: string;
   case_code: string | null;
   case_stage: string | null;
+  created_at: string | null;
 }
 
 interface Lead {
@@ -61,6 +62,7 @@ const LEAD_TYPES: { value: LeadType | "all"; label: string; icon: React.ElementT
   { value: "doctor_enquiry",    label: "Doctor Enquiries",  icon: UserCheck,    color: "text-violet-600" },
   { value: "hospital_enquiry",  label: "Hospital Enquiries",icon: Building2,    color: "text-teal-600" },
   { value: "career_enquiry",    label: "Careers",           icon: Briefcase,    color: "text-amber-600" },
+  { value: "cases",             label: "Cases",             icon: FolderOpen,   color: "text-emerald-600" },
 ];
 
 const CRM_STATUSES: { value: CRMStatus; label: string; color: string }[] = [
@@ -318,7 +320,7 @@ const AdminLeads = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("leads")
-        .select("*, patient_cases!lead_id(id, case_code, case_stage)")
+        .select("*, patient_cases!lead_id(id, case_code, case_stage, created_at)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data as any[]).map((l) => ({
@@ -377,14 +379,25 @@ const AdminLeads = () => {
   // Tab counts
   const counts = useMemo(() => {
     const map: Record<string, number> = { all: rawLeads.length };
-    for (const t of LEAD_TYPES.filter((t) => t.value !== "all")) {
+    for (const t of LEAD_TYPES.filter((t) => t.value !== "all" && t.value !== "cases")) {
       map[t.value] = rawLeads.filter((l) => l.lead_type === t.value).length;
     }
+    map["cases"] = rawLeads.filter((l) => l.crm_status === "converted" && l.linked_case).length;
     return map;
   }, [rawLeads]);
 
   // Filtered leads
   const filtered = useMemo(() => {
+    if (activeTab === "cases") {
+      // Show converted leads sorted by case created_at desc
+      return rawLeads
+        .filter((l) => l.crm_status === "converted" && l.linked_case)
+        .sort((a, b) => {
+          const aDate = a.linked_case?.created_at ?? a.updated_at;
+          const bDate = b.linked_case?.created_at ?? b.updated_at;
+          return new Date(bDate).getTime() - new Date(aDate).getTime();
+        });
+    }
     return rawLeads.filter((l) => {
       const q = search.toLowerCase();
       const matchTab = activeTab === "all" || l.lead_type === activeTab;
@@ -449,8 +462,8 @@ const AdminLeads = () => {
         })}
       </div>
 
-      {/* ── Search + Filters ────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-5">
+      {/* ── Search + Filters (hidden on Cases tab) ──────────────────────────── */}
+      <div className={`flex flex-col sm:flex-row gap-3 mb-5 ${activeTab === "cases" ? "hidden" : ""}`}>
         {/* Search */}
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -509,8 +522,12 @@ const AdminLeads = () => {
 
       {/* ── Count ─────────────────────────────────────────────────────────── */}
       <p className="text-sm text-muted-foreground mb-4">
-        Showing <span className="font-semibold text-foreground">{filtered.length}</span> lead{filtered.length !== 1 ? "s" : ""}
-        {filtered.length !== rawLeads.length && ` (filtered from ${rawLeads.length})`}
+        {activeTab === "cases" ? (
+          <>Showing <span className="font-semibold text-foreground">{filtered.length}</span> converted case{filtered.length !== 1 ? "s" : ""} · latest first</>
+        ) : (
+          <>Showing <span className="font-semibold text-foreground">{filtered.length}</span> lead{filtered.length !== 1 ? "s" : ""}
+          {filtered.length !== rawLeads.length && ` (filtered from ${rawLeads.length})`}</>
+        )}
       </p>
 
       {/* ── Table ─────────────────────────────────────────────────────────── */}
@@ -523,7 +540,11 @@ const AdminLeads = () => {
                 <TableHead className="font-semibold">Contact</TableHead>
                 <TableHead className="font-semibold">City</TableHead>
                 <TableHead className="font-semibold">Enquiry / Interest</TableHead>
-                <TableHead className="font-semibold">Source</TableHead>
+                {activeTab === "cases" ? (
+                  <TableHead className="font-semibold">Case #</TableHead>
+                ) : (
+                  <TableHead className="font-semibold">Source</TableHead>
+                )}
                 <TableHead className="font-semibold">Status</TableHead>
                 <TableHead className="font-semibold">Priority</TableHead>
                 <TableHead className="font-semibold">Assigned</TableHead>
@@ -595,9 +616,22 @@ const AdminLeads = () => {
                       </p>
                     </TableCell>
 
-                    {/* Source */}
+                    {/* Source / Case # */}
                     <TableCell>
-                      {lead.source_page ? (
+                      {activeTab === "cases" ? (
+                        lead.linked_case ? (
+                          <div>
+                            <span className="text-xs font-mono font-semibold text-emerald-700">
+                              {lead.linked_case.case_code ?? "—"}
+                            </span>
+                            {lead.linked_case.case_stage && (
+                              <p className="text-[10px] text-muted-foreground capitalize mt-0.5">
+                                {lead.linked_case.case_stage.replace(/_/g, " ")}
+                              </p>
+                            )}
+                          </div>
+                        ) : <span className="text-muted-foreground/40">—</span>
+                      ) : lead.source_page ? (
                         <span className="text-[11px] bg-secondary px-2 py-0.5 rounded-full text-muted-foreground">
                           {lead.source_page}
                         </span>
