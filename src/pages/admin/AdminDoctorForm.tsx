@@ -15,6 +15,7 @@ import { ArrowLeft, Plus, X, Save, Check, ChevronsUpDown, Loader2, MapPin, Build
 import { useSpecialties } from "@/hooks/useSpecialties";
 import { useCountries, useStates, useCities } from "@/hooks/useLocations";
 import { cn } from "@/lib/utils";
+import ImageUpload from "@/components/ui/ImageUpload";
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -477,10 +478,14 @@ const AdminDoctorForm = () => {
                   <Input required value={form.consultation_fee} onChange={(e) => set("consultation_fee", e.target.value)} placeholder="e.g. ₹800" />
                 </div>
 
-                {/* Image URL */}
+                {/* Profile Image Upload */}
                 <div className="space-y-2">
-                  <Label>Profile Image URL</Label>
-                  <Input value={form.image_url} onChange={(e) => set("image_url", e.target.value)} placeholder="https://..." />
+                  <ImageUpload
+                    label="Profile Image"
+                    value={form.image_url}
+                    onChange={(url) => set("image_url", url)}
+                    folder="doctors"
+                  />
                 </div>
               </div>
 

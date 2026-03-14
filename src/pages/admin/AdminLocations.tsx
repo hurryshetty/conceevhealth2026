@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Search, MapPin, Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import ImageUpload from "@/components/ui/ImageUpload";
 import { Switch } from "@/components/ui/switch";
 import { StatusBadge } from "./AdminVerification";
 import { useCountries, useStates, useCities, useAreas } from "@/hooks/useLocations";
@@ -23,6 +24,7 @@ interface LocationForm {
   city_id: string;
   areas: string[];
   surgeries: string;
+  image_url: string;
 }
 
 const emptyForm: LocationForm = {
@@ -32,6 +34,7 @@ const emptyForm: LocationForm = {
   city_id: "",
   areas: [],
   surgeries: "",
+  image_url: "",
 };
 
 // ── Searchable Combobox ──────────────────────────────────────────────────────
@@ -145,6 +148,7 @@ const AdminLocations = () => {
         areas: f.areas,
         city_id: f.city_id,
         surgeries: f.surgeries.split(",").map((s) => s.trim()).filter(Boolean),
+        image_url: f.image_url || null,
       };
       if (editId) {
         const { error } = await supabase.from("locations").update(payload).eq("id", editId);
@@ -201,6 +205,7 @@ const AdminLocations = () => {
       city_id: l.city_id,
       areas: l.areas || [],
       surgeries: (l.surgeries || []).join(", "),
+      image_url: l.image_url || "",
     });
     setDialogOpen(true);
   };
@@ -320,6 +325,14 @@ const AdminLocations = () => {
                 required
               />
             </div>
+
+            {/* Hospital Logo / Image */}
+            <ImageUpload
+              label="Hospital Logo / Image"
+              value={form.image_url}
+              onChange={(url) => setForm({ ...form, image_url: url })}
+              folder="hospitals"
+            />
 
             {/* ── Location Hierarchy ── */}
             <div className="space-y-3 rounded-lg border border-border p-4 bg-muted/30">
