@@ -8,6 +8,7 @@ import { useScrollToTop } from "@/hooks/useScrollToTop";
 // Public pages
 import Index from "./pages/Index";
 import IVFBangalore from "./pages/IVFBangalore";
+import IVFPackageLanding from "./pages/IVFPackageLanding";
 import HysterectomyHyderabad from "./pages/HysterectomyHyderabad";
 import Packages from "./pages/Packages";
 import PackageDetail from "./pages/PackageDetail";
@@ -96,6 +97,7 @@ const App = () => (
           {/* Public */}
           <Route path="/" element={<Index />} />
           <Route path="/ivf-bangalore" element={<IVFBangalore />} />
+          <Route path="/ivf-package" element={<IVFPackageLanding />} />
           <Route path="/hysterectomy-hyderabad" element={<HysterectomyHyderabad />} />
           <Route path="/packages" element={<Packages />} />
           <Route path="/packages/:slug" element={<PackageDetail />} />
