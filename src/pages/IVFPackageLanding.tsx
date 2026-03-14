@@ -235,39 +235,31 @@ const IVFPackageLanding = () => {
                 </div>
               </div>
 
-              {/* Right: visual card */}
+              {/* Right: couple + baby image */}
               <div className="hidden md:flex justify-center">
-                <div className="relative w-full max-w-sm">
-                  <div className="bg-card rounded-3xl border border-border shadow-2xl p-8 space-y-5">
-                    <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-                      <Baby className="h-8 w-8 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Package Includes</p>
-                      <ul className="space-y-2">
-                        {packageSteps.slice(0, 6).map((s) => (
-                          <li key={s.title} className="flex items-center gap-2 text-sm text-foreground">
-                            <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                            {s.title}
-                          </li>
-                        ))}
-                        <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                          + 2 more steps included
-                        </li>
-                      </ul>
-                    </div>
-                    <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 text-center">
-                      <p className="text-xs text-muted-foreground">All-Inclusive Package</p>
-                      <p className="font-serif text-2xl font-bold text-primary mt-1">₹1,25,000/-</p>
-                    </div>
-                    <Button className="w-full rounded-full" onClick={() => setFormOpen(true)}>
-                      Get Free Consultation
-                    </Button>
+                <div className="relative w-full max-w-md">
+                  {/* Main image */}
+                  <div className="rounded-3xl overflow-hidden shadow-2xl aspect-[4/5]">
+                    <img
+                      src="https://images.unsplash.com/photo-1492725764893-90b379c2b6e7?w=800&q=80"
+                      alt="Happy couple holding their newborn baby — IVF success"
+                      className="w-full h-full object-cover object-center"
+                    />
+                    {/* Gradient overlay at bottom */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent rounded-3xl" />
                   </div>
-                  {/* Floating badge */}
-                  <div className="absolute -top-4 -right-4 bg-green-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-                    EMI Available
+
+                  {/* Floating price badge — bottom left */}
+                  <div className="absolute -bottom-4 -left-4 bg-card border border-border rounded-2xl shadow-xl px-5 py-4">
+                    <p className="text-xs text-muted-foreground font-medium">All-Inclusive Package</p>
+                    <p className="font-serif text-2xl font-bold text-primary leading-tight">₹1,25,000/-</p>
+                    <p className="text-xs text-green-600 font-semibold mt-0.5">EMI Available</p>
+                  </div>
+
+                  {/* Floating success badge — top right */}
+                  <div className="absolute -top-4 -right-4 bg-primary text-primary-foreground rounded-2xl shadow-xl px-4 py-3 text-center">
+                    <p className="font-bold text-lg leading-tight">40–60%</p>
+                    <p className="text-xs text-primary-foreground/80 leading-tight">Success Rate</p>
                   </div>
                 </div>
               </div>
