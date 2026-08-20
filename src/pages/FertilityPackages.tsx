@@ -177,12 +177,12 @@ const FertilityPackages = () => {
             aria-hidden="true"
           />
 
-          <div className="container relative mx-auto px-4 py-16 md:py-24">
+          <div className="relative mx-auto max-w-[1280px] px-5 sm:px-8 py-14 sm:py-24">
             <div className="max-w-3xl">
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary mb-4">
                 Fertility care, made understandable
               </p>
-              <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl font-bold leading-[1.1] text-foreground">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold leading-[1.1] text-foreground">
                 Your fertility journey starts with clarity
               </h1>
               <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mt-5 max-w-2xl">
@@ -227,18 +227,18 @@ const FertilityPackages = () => {
         </section>
 
         {/* ── Intent selector ───────────────────────────────────────────────── */}
-        <section className="py-14 md:py-16 border-t border-border" aria-labelledby="intent-selector-heading">
-          <div className="container mx-auto px-4">
+        <section className="py-12 sm:py-16 border-t border-border" aria-labelledby="intent-selector-heading">
+          <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
             <IntentSelector value={intent} onChange={handleIntentChange} />
           </div>
         </section>
 
         {/* ── Package grid ──────────────────────────────────────────────────── */}
         <section className="pb-16 md:pb-20" aria-labelledby="packages-heading">
-          <div className="container mx-auto px-4">
+          <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-5 mb-8">
               <div>
-                <h2 id="packages-heading" className="font-serif text-2xl sm:text-3xl font-bold text-foreground">
+                <h2 id="packages-heading" className="text-2xl sm:text-3xl font-bold text-foreground">
                   {intent && recommendedCount > 0 ? "Recommended for you" : "All fertility packages"}
                 </h2>
                 <p className="text-sm text-muted-foreground mt-2 max-w-xl">
@@ -318,8 +318,8 @@ const FertilityPackages = () => {
 
         {/* ── Comparison ────────────────────────────────────────────────────── */}
         {packages.length > 1 && (
-          <section className="py-16 md:py-20 bg-secondary/[0.04] border-y border-border" aria-labelledby="comparison-heading">
-            <div className="container mx-auto px-4">
+          <section className="py-14 sm:py-20 bg-secondary/[0.04] border-y border-border" aria-labelledby="comparison-heading">
+            <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
               <SectionHeading
                 id="comparison-heading"
                 eyebrow="Side by side"
@@ -338,8 +338,8 @@ const FertilityPackages = () => {
         )}
 
         {/* ── How it works ──────────────────────────────────────────────────── */}
-        <section className="py-16 md:py-20" aria-labelledby="how-it-works-heading">
-          <div className="container mx-auto px-4">
+        <section className="py-14 sm:py-20" aria-labelledby="how-it-works-heading">
+          <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
             <SectionHeading
               id="how-it-works-heading"
               eyebrow="How it works"
@@ -352,7 +352,7 @@ const FertilityPackages = () => {
 
         {/* ── Experts ───────────────────────────────────────────────────────── */}
         <section className="pb-16 md:pb-20" aria-labelledby="experts-heading">
-          <div className="container mx-auto px-4">
+          <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
             <SectionHeading
               id="experts-heading"
               eyebrow="Your care team"
@@ -364,38 +364,46 @@ const FertilityPackages = () => {
         </section>
 
         {/* ── Final CTA ─────────────────────────────────────────────────────── */}
-        <section className="bg-navy text-primary-foreground py-16 md:py-20">
-          <div className="container mx-auto px-4 text-center max-w-2xl">
-            <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">
-              Not sure where to start?
-            </h2>
-            <p className="text-primary-foreground/70 leading-relaxed mb-8">
-              Talk to a fertility expert and find the right next step for you. No commitment,
-              no pressure — just a conversation about where you are.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button
-                size="lg"
-                className="rounded-full"
-                onClick={() => talkToExpert("final_cta")}
-              >
-                Talk to an Expert
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="rounded-full border-primary-foreground/25 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
-                onClick={() => setRecommenderOpen(true)}
-              >
-                Explore Packages
-              </Button>
+        <section className="py-12 sm:py-20">
+          <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
+            <div className="relative overflow-hidden rounded-[24px] bg-conceev-gradient px-6 py-12 sm:px-14 sm:py-16">
+              <div
+                className="pointer-events-none absolute -right-20 -top-24 h-[420px] w-[420px] rounded-full bg-white/[0.06] blur-[100px]"
+                aria-hidden="true"
+              />
+              <div className="relative max-w-[34ch]">
+                <h2 className="text-[30px] font-bold leading-[1.06] text-white sm:text-[42px]">
+                  Not sure where to start?
+                </h2>
+                {/* /85 — the ramp reaches pure red, where less fails AA. */}
+                <p className="mt-4 max-w-[46ch] text-[15px] leading-[1.65] text-white/85 sm:text-[16px]">
+                  Talk to a fertility expert and find the right next step for you. No commitment,
+                  no pressure — just a conversation about where you are.
+                </p>
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => talkToExpert("final_cta")}
+                    className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-xl bg-white px-7 py-3.5 text-[15px] font-semibold text-conceev-black transition-transform duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-conceev-black"
+                  >
+                    Talk to an Expert
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRecommenderOpen(true)}
+                    className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-xl border border-white/30 px-7 py-3.5 text-[15px] font-semibold text-white transition-colors duration-200 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-conceev-black"
+                  >
+                    Explore Packages
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
         {/* ── Medical note ──────────────────────────────────────────────────── */}
         <section className="py-10 border-t border-border">
-          <div className="container mx-auto px-4">
+          <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
             <p className="text-xs text-muted-foreground leading-relaxed max-w-3xl">
               Fertility assessments may help you and your specialist understand your
               reproductive health and decide what to consider next. No assessment can detect

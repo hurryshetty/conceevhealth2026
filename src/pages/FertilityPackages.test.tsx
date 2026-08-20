@@ -174,6 +174,20 @@ describe("/fertility-packages/:slug", () => {
     expect(hrefs.some((h) => h.includes("Egg Freezing Readiness Check"))).toBe(true);
   });
 
+  it("offers in-page navigation across the long detail page", async () => {
+    renderAt("/fertility-packages/complete-fertility-assessment");
+    await screen.findByRole("heading", { level: 1 });
+
+    const nav = screen.getByRole("navigation", { name: /on this page/i });
+    // Every link must point at a section that actually exists on the page.
+    const links = within(nav).getAllByRole("link");
+    expect(links.length).toBeGreaterThanOrEqual(8);
+    links.forEach((link) => {
+      const id = link.getAttribute("href")!.replace("#", "");
+      expect(document.getElementById(id), `missing section #${id}`).not.toBeNull();
+    });
+  });
+
   it("renders a not-found state for an unknown slug", async () => {
     renderAt("/fertility-packages/does-not-exist");
 

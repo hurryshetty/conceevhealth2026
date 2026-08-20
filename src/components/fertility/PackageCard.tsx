@@ -20,6 +20,8 @@ interface PackageCardProps {
 }
 
 const MAX_VISIBLE_INCLUSIONS = 5;
+/** Fewer on phones so two cards can be compared without a full-screen scroll. */
+const MOBILE_VISIBLE_INCLUSIONS = 3;
 
 const PackageCard = ({
   pkg,
@@ -37,7 +39,7 @@ const PackageCard = ({
   return (
     <article
       className={cn(
-        "group relative flex flex-col rounded-2xl border bg-card p-6 sm:p-7 transition-all duration-300",
+        "group relative flex flex-col rounded-2xl border bg-card p-5 sm:p-7 transition-all duration-300",
         "hover:shadow-lg focus-within:shadow-lg",
         recommended
           ? "border-primary/50 ring-1 ring-primary/20 shadow-sm"
@@ -55,7 +57,7 @@ const PackageCard = ({
             </span>
           )}
           {pkg.badge && (
-            <span className="text-[11px] font-semibold uppercase tracking-wide bg-navy/5 text-navy border border-navy/15 px-2.5 py-1 rounded-full">
+            <span className="rounded-full border border-conceev-black/12 bg-conceev-offwhite px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-conceev-black/70">
               {pkg.badge}
             </span>
           )}
@@ -74,7 +76,7 @@ const PackageCard = ({
           <p className="text-[11px] font-semibold uppercase tracking-widest text-primary mb-1">
             {pkg.category}
           </p>
-          <h3 className="font-serif text-xl font-bold leading-snug text-foreground">
+          <h3 className="text-xl font-bold leading-snug text-foreground">
             {/* The internal link crawlers follow through to the detail page. */}
             <Link
               to={detailPath}
@@ -91,15 +93,26 @@ const PackageCard = ({
         {pkg.short_description}
       </p>
 
-      <p className="inline-flex w-fit items-center gap-1.5 text-xs font-medium text-foreground/70 bg-secondary/10 border border-border rounded-full px-3 py-1 mb-5">
+      <p className="mb-5 inline-flex w-fit items-center gap-1.5 rounded-full border border-border bg-secondary/10 px-3 py-1 text-xs font-medium text-foreground/70">
         <span className="text-muted-foreground">Ideal for</span>
         {pkg.ideal_for_label}
       </p>
 
-      {/* ── Inclusions ─────────────────────────────────────────────────────── */}
-      <ul className="space-y-2.5 mb-5">
-        {visible.map((item) => (
-          <li key={item.id} className="flex items-start gap-2.5 text-sm text-foreground/85">
+      {/*
+        ── Inclusions ──────────────────────────────────────────────────────
+        Three shown on mobile, five from sm up. Listing five on a phone made
+        each card about a screen tall, so two packages could never be
+        compared without scrolling. The counter carries the remainder.
+      */}
+      <ul className="mb-5 space-y-2.5">
+        {visible.map((item, i) => (
+          <li
+            key={item.id}
+            className={cn(
+              "flex items-start gap-2.5 text-sm text-foreground/85",
+              i >= MOBILE_VISIBLE_INCLUSIONS && "hidden sm:flex"
+            )}
+          >
             <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
             <span className="leading-snug">
               {item.label}
@@ -109,11 +122,15 @@ const PackageCard = ({
             </span>
           </li>
         ))}
-        {remaining > 0 && (
-          <li className="pl-[26px] text-sm font-medium text-primary">
-            + {remaining} more included
-          </li>
-        )}
+        <li className="pl-[26px] text-sm font-medium text-primary">
+          <span className="sm:hidden">
+            {allInclusions.length - MOBILE_VISIBLE_INCLUSIONS > 0 &&
+              `+ ${allInclusions.length - MOBILE_VISIBLE_INCLUSIONS} more included`}
+          </span>
+          <span className="hidden sm:inline">
+            {remaining > 0 && `+ ${remaining} more included`}
+          </span>
+        </li>
       </ul>
 
       {/* ── Meta ───────────────────────────────────────────────────────────── */}

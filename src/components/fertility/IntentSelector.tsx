@@ -20,7 +20,7 @@ interface IntentSelectorProps {
 const IntentSelector = ({ value, onChange, className }: IntentSelectorProps) => (
   <div className={cn("w-full", className)}>
     <div className="flex flex-wrap items-baseline justify-between gap-2 mb-5">
-      <h2 id="intent-selector-heading" className="font-serif text-2xl sm:text-3xl font-bold text-foreground">
+      <h2 id="intent-selector-heading" className="text-2xl sm:text-3xl font-bold text-foreground">
         I want to&hellip;
       </h2>
       {value && (
@@ -35,10 +35,15 @@ const IntentSelector = ({ value, onChange, className }: IntentSelectorProps) => 
       )}
     </div>
 
+    {/*
+      Mobile gets a single-row scroll rail of compact chips: seven full-size
+      cards stacked was roughly two screens of scrolling before a single
+      package came into view. From sm up they become the fuller cards.
+    */}
     <div
       role="radiogroup"
       aria-labelledby="intent-selector-heading"
-      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"
+      className="-mx-5 flex snap-rail gap-2.5 overflow-x-auto scrollbar-hide px-5 pb-1 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:px-0 lg:grid-cols-4"
     >
       {FERTILITY_INTENTS.map((intent) => {
         const Icon = getFertilityIcon(intent.icon);
@@ -51,29 +56,31 @@ const IntentSelector = ({ value, onChange, className }: IntentSelectorProps) => 
             aria-checked={selected}
             onClick={() => onChange(selected ? null : intent.id)}
             className={cn(
-              "group flex items-start gap-3 rounded-2xl border p-4 text-left transition-all duration-200",
+              "group flex shrink-0 items-center gap-2.5 rounded-full border px-4 py-2.5 text-left transition-all duration-200",
+              "sm:shrink sm:items-start sm:gap-3 sm:rounded-2xl sm:px-4 sm:py-4",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
               selected
-                ? "border-primary bg-primary/5 shadow-sm"
-                : "border-border bg-card hover:border-primary/40 hover:shadow-sm"
+                ? "border-primary bg-primary/5"
+                : "border-border bg-card hover:border-primary/40 sm:hover:shadow-sm"
             )}
           >
             <span
               className={cn(
-                "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors",
+                "flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors sm:h-9 sm:w-9 sm:rounded-lg",
                 selected
                   ? "bg-primary text-primary-foreground"
                   : "bg-primary/10 text-primary group-hover:bg-primary/15"
               )}
               aria-hidden="true"
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </span>
             <span className="min-w-0">
-              <span className="block text-sm font-semibold text-foreground leading-snug">
+              <span className="block whitespace-nowrap text-[13px] font-semibold leading-snug text-foreground sm:whitespace-normal sm:text-sm">
                 {intent.label}
               </span>
-              <span className="block text-xs text-muted-foreground mt-0.5 leading-snug">
+              {/* Description is noise in a chip; shown from sm up. */}
+              <span className="mt-0.5 hidden text-xs leading-snug text-muted-foreground sm:block">
                 {intent.description}
               </span>
             </span>

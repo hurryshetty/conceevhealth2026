@@ -266,7 +266,7 @@ const PackageBookingModal = ({
             <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-success/10">
               <CheckCircle2 className="h-7 w-7 text-green-success" aria-hidden="true" />
             </span>
-            <h2 className="font-serif text-xl font-bold text-foreground mb-2">
+            <h2 className="text-xl font-bold text-foreground mb-2">
               Request received
             </h2>
             <p className="text-sm text-muted-foreground max-w-sm mx-auto">
@@ -281,7 +281,7 @@ const PackageBookingModal = ({
         ) : (
           <>
             <DialogHeader className="text-left">
-              <DialogTitle className="font-serif text-xl">Book {pkg.name}</DialogTitle>
+              <DialogTitle className="text-xl">Book {pkg.name}</DialogTitle>
               <DialogDescription>
                 Share your details and a care coordinator will confirm your appointment and
                 full pricing before anything is booked.

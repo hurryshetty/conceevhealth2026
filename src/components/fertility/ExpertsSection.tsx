@@ -49,7 +49,7 @@ const ExpertsSection = ({ limit = 3 }: ExpertsSectionProps) => {
                 </span>
               )}
               <div className="min-w-0">
-                <h3 className="font-serif text-lg font-bold text-foreground leading-snug">
+                <h3 className="text-lg font-bold text-foreground leading-snug">
                   {doctor.name}
                 </h3>
                 {doctor.designation && (

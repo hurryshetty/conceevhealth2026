@@ -42,7 +42,7 @@ export const SectionHeading = ({
         {eyebrow}
       </p>
     )}
-    <h2 id={id} className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold text-foreground">
+    <h2 id={id} className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground">
       {title}
     </h2>
     {description && (
@@ -205,7 +205,7 @@ export const HowItWorks = ({ steps }: { steps: HowItWorksStep[] }) => {
       />
       {steps.map((step) => (
         <li key={step.step} className="relative flex md:block gap-4">
-          <span className="relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-border bg-card font-serif text-base font-bold text-primary md:mb-4">
+          <span className="relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-border bg-card text-base font-bold text-primary md:mb-4">
             {step.step}
           </span>
           <div className="min-w-0 pt-2 md:pt-0">

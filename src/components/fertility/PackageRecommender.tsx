@@ -217,7 +217,7 @@ const PackageRecommender = ({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-lg rounded-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="text-left">
-          <DialogTitle className="font-serif text-xl">
+          <DialogTitle className="text-xl">
             {finished ? "Here's a good place to start" : "Find your starting point"}
           </DialogTitle>
           <DialogDescription>
@@ -305,7 +305,7 @@ const PackageRecommender = ({
                       );
                     })()}
                     <div className="min-w-0">
-                      <h3 className="font-serif text-lg font-bold text-foreground">
+                      <h3 className="text-lg font-bold text-foreground">
                         {primary.name}
                       </h3>
                       <p className="text-sm text-muted-foreground mt-1">
@@ -343,7 +343,7 @@ const PackageRecommender = ({
                     <Link
                       to={`/fertility-packages/${alternative.slug}`}
                       onClick={() => handleClose(false)}
-                      className="font-serif font-bold text-foreground hover:text-primary transition-colors"
+                      className="font-bold text-foreground hover:text-primary transition-colors"
                     >
                       {alternative.name}
                     </Link>

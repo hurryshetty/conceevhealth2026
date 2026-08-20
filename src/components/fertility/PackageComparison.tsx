@@ -108,7 +108,7 @@ const PackageComparison = ({ packages, onBook, onInteract }: PackageComparisonPr
                   <Link
                     to={`/fertility-packages/${pkg.slug}`}
                     onClick={() => noteInteraction(`open_${pkg.slug}`)}
-                    className="font-serif text-base font-bold text-foreground hover:text-primary transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="text-base font-bold text-foreground hover:text-primary transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {pkg.name}
                   </Link>
@@ -192,7 +192,7 @@ const PackageComparison = ({ packages, onBook, onInteract }: PackageComparisonPr
               <Link
                 to={`/fertility-packages/${pkg.slug}`}
                 onClick={() => noteInteraction(`open_${pkg.slug}`)}
-                className="font-serif text-lg font-bold text-foreground"
+                className="text-lg font-bold text-foreground"
               >
                 {pkg.name}
               </Link>

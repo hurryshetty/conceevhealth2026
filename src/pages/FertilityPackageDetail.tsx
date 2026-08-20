@@ -31,6 +31,7 @@ import PriceBlock from "@/components/fertility/PriceBlock";
 import WhatsAppPackageButton from "@/components/fertility/WhatsAppPackageButton";
 import StickyPackageBar from "@/components/fertility/StickyPackageBar";
 import PackageBookingModal from "@/components/fertility/PackageBookingModal";
+import PackageSectionNav from "@/components/fertility/PackageSectionNav";
 import ExpertsSection from "@/components/fertility/ExpertsSection";
 import PackageTestimonials from "@/components/fertility/PackageTestimonials";
 import {
@@ -42,6 +43,18 @@ import {
   SectionHeading,
   WhatYouLearn,
 } from "@/components/fertility/PackageSections";
+
+/** Order matches the page; ids are set on the corresponding <section>. */
+const DETAIL_SECTIONS = [
+  { id: "overview", label: "Overview" },
+  { id: "who-its-for", label: "Who it's for" },
+  { id: "whats-included", label: "What's included" },
+  { id: "what-youll-learn", label: "What you'll learn" },
+  { id: "how-it-works", label: "How it works" },
+  { id: "your-results", label: "Your results" },
+  { id: "experts", label: "Experts" },
+  { id: "faqs", label: "FAQs" },
+];
 
 const FertilityPackageDetail = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -68,7 +81,7 @@ const FertilityPackageDetail = () => {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="container mx-auto px-4 py-24" aria-busy="true">
+        <div className="mx-auto max-w-[1280px] px-5 sm:px-8 py-24" aria-busy="true">
           <div className="h-8 w-48 rounded-full bg-card animate-pulse mb-6" />
           <div className="h-14 w-full max-w-xl rounded-2xl bg-card animate-pulse mb-4" />
           <div className="h-40 w-full rounded-2xl bg-card animate-pulse" />
@@ -88,8 +101,8 @@ const FertilityPackageDetail = () => {
           noIndex
         />
         <Navbar />
-        <div className="container mx-auto px-4 py-24 text-center">
-          <h1 className="font-serif text-3xl font-bold text-foreground mb-3">
+        <div className="mx-auto max-w-[1280px] px-5 sm:px-8 py-24 text-center">
+          <h1 className="text-3xl font-bold text-foreground mb-3">
             We couldn't find that package
           </h1>
           <p className="text-muted-foreground mb-8">
@@ -183,7 +196,7 @@ const FertilityPackageDetail = () => {
             className="pointer-events-none absolute -top-28 right-0 h-80 w-80 rounded-full bg-primary/10 blur-3xl"
             aria-hidden="true"
           />
-          <div className="container relative mx-auto px-4 py-10 md:py-16">
+          <div className="relative mx-auto max-w-[1280px] px-5 sm:px-8 py-10 sm:py-16">
             <nav aria-label="Breadcrumb" className="mb-7">
               <ol className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
                 <li>
@@ -219,7 +232,7 @@ const FertilityPackageDetail = () => {
                   )}
                 </div>
 
-                <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold leading-[1.12] text-foreground">
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-[1.12] text-foreground">
                   {pkg.hero_title}
                 </h1>
                 <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mt-4 max-w-2xl">
@@ -330,8 +343,10 @@ const FertilityPackageDetail = () => {
         </section>
 
         {/* ── Overview ──────────────────────────────────────────────────────── */}
-        <section className="py-14 md:py-16" aria-labelledby="overview-heading">
-          <div className="container mx-auto px-4">
+        <PackageSectionNav sections={DETAIL_SECTIONS} />
+
+        <section id="overview" className="scroll-mt-32 py-12 sm:py-16" aria-labelledby="overview-heading">
+          <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
             <SectionHeading id="overview-heading" eyebrow="Overview" title={pkg.tagline} />
             <p className="max-w-3xl text-base leading-relaxed text-foreground/80">
               {pkg.long_description}
@@ -340,8 +355,8 @@ const FertilityPackageDetail = () => {
         </section>
 
         {/* ── Is this right for me ──────────────────────────────────────────── */}
-        <section className="py-14 md:py-16 bg-secondary/[0.04] border-y border-border" aria-labelledby="ideal-for-heading">
-          <div className="container mx-auto px-4">
+        <section id="who-its-for" className="scroll-mt-32 border-y border-border bg-secondary/[0.04] py-12 sm:py-16" aria-labelledby="ideal-for-heading">
+          <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
             <SectionHeading
               id="ideal-for-heading"
               eyebrow="Is this right for me?"
@@ -352,8 +367,8 @@ const FertilityPackageDetail = () => {
         </section>
 
         {/* ── What's included ───────────────────────────────────────────────── */}
-        <section className="py-14 md:py-20" aria-labelledby="inclusions-heading">
-          <div className="container mx-auto px-4">
+        <section id="whats-included" className="scroll-mt-32 py-12 sm:py-20" aria-labelledby="inclusions-heading">
+          <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
             <SectionHeading
               id="inclusions-heading"
               eyebrow="What's included"
@@ -385,8 +400,8 @@ const FertilityPackageDetail = () => {
         </section>
 
         {/* ── What you'll learn ─────────────────────────────────────────────── */}
-        <section className="py-14 md:py-16 bg-secondary/[0.04] border-y border-border" aria-labelledby="learn-heading">
-          <div className="container mx-auto px-4">
+        <section id="what-youll-learn" className="scroll-mt-32 border-y border-border bg-secondary/[0.04] py-12 sm:py-16" aria-labelledby="learn-heading">
+          <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
             <SectionHeading
               id="learn-heading"
               eyebrow="What you'll learn"
@@ -398,16 +413,16 @@ const FertilityPackageDetail = () => {
         </section>
 
         {/* ── How it works ──────────────────────────────────────────────────── */}
-        <section className="py-14 md:py-20" aria-labelledby="steps-heading">
-          <div className="container mx-auto px-4">
+        <section id="how-it-works" className="scroll-mt-32 py-12 sm:py-20" aria-labelledby="steps-heading">
+          <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
             <SectionHeading id="steps-heading" eyebrow="How it works" title="From booking to next steps" />
             <HowItWorks steps={pkg.how_it_works} />
           </div>
         </section>
 
         {/* ── Results experience ────────────────────────────────────────────── */}
-        <section className="py-14 md:py-16 bg-secondary/[0.04] border-y border-border" aria-labelledby="results-heading">
-          <div className="container mx-auto px-4">
+        <section id="your-results" className="scroll-mt-32 border-y border-border bg-secondary/[0.04] py-12 sm:py-16" aria-labelledby="results-heading">
+          <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
             <SectionHeading
               id="results-heading"
               eyebrow="After your assessment"
@@ -419,8 +434,8 @@ const FertilityPackageDetail = () => {
         </section>
 
         {/* ── Experts ───────────────────────────────────────────────────────── */}
-        <section className="py-14 md:py-20" aria-labelledby="detail-experts-heading">
-          <div className="container mx-auto px-4">
+        <section id="experts" className="scroll-mt-32 py-12 sm:py-20" aria-labelledby="detail-experts-heading">
+          <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
             <SectionHeading
               id="detail-experts-heading"
               eyebrow="Your care team"
@@ -434,8 +449,8 @@ const FertilityPackageDetail = () => {
         <TestimonialsSection packageId={pkg.id} />
 
         {/* ── FAQs ──────────────────────────────────────────────────────────── */}
-        <section className="py-14 md:py-20 bg-secondary/[0.04] border-y border-border" aria-labelledby="faq-heading">
-          <div className="container mx-auto px-4">
+        <section id="faqs" className="scroll-mt-32 border-y border-border bg-secondary/[0.04] py-12 sm:py-20" aria-labelledby="faq-heading">
+          <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
             <SectionHeading
               id="faq-heading"
               eyebrow="Questions"
@@ -447,8 +462,8 @@ const FertilityPackageDetail = () => {
 
         {/* ── Related packages ──────────────────────────────────────────────── */}
         {related.length > 0 && (
-          <section className="py-14 md:py-20" aria-labelledby="related-heading">
-            <div className="container mx-auto px-4">
+          <section className="scroll-mt-32 py-12 sm:py-20" aria-labelledby="related-heading">
+            <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
               <SectionHeading
                 id="related-heading"
                 eyebrow="Also worth considering"
@@ -464,33 +479,45 @@ const FertilityPackageDetail = () => {
         )}
 
         {/* ── Final CTA ─────────────────────────────────────────────────────── */}
-        <section className="bg-navy text-primary-foreground py-16 md:py-20">
-          <div className="container mx-auto px-4 text-center max-w-2xl">
-            <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">
-              Ready when you are
-            </h2>
-            <p className="text-primary-foreground/70 leading-relaxed mb-8">
-              Book the {pkg.name}, or message us first if you'd rather ask a few questions.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button size="lg" className="rounded-full" onClick={() => openBooking("final_cta")}>
-                Book Package
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="rounded-full border-primary-foreground/25 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
-                asChild
-              >
-                <Link to="/fertility-packages">Explore all packages</Link>
-              </Button>
+        <section className="py-12 sm:py-20">
+          <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
+            <div className="relative overflow-hidden rounded-[24px] bg-conceev-gradient px-6 py-12 sm:px-14 sm:py-16">
+              <div
+                className="pointer-events-none absolute -right-20 -top-24 h-[420px] w-[420px] rounded-full bg-white/[0.06] blur-[100px]"
+                aria-hidden="true"
+              />
+              <div className="relative max-w-[32ch]">
+                <h2 className="text-[30px] font-bold leading-[1.06] text-white sm:text-[42px]">
+                  Ready when you are.
+                </h2>
+                {/* /85 — the ramp reaches pure red, where less fails AA. */}
+                <p className="mt-4 max-w-[44ch] text-[15px] leading-[1.65] text-white/85 sm:text-[16px]">
+                  Book the {pkg.name}, or message us first if you'd rather ask a few
+                  questions.
+                </p>
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => openBooking("final_cta")}
+                    className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-xl bg-white px-7 py-3.5 text-[15px] font-semibold text-conceev-black transition-transform duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-conceev-black"
+                  >
+                    Book Package
+                  </button>
+                  <Link
+                    to="/fertility-packages"
+                    className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-xl border border-white/30 px-7 py-3.5 text-[15px] font-semibold text-white transition-colors duration-200 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-conceev-black"
+                  >
+                    Explore all packages
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
         {/* ── Medical note ──────────────────────────────────────────────────── */}
         <section className="py-10 border-t border-border">
-          <div className="container mx-auto px-4">
+          <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
             <p className="text-xs text-muted-foreground leading-relaxed max-w-3xl">
               This package may help you and your fertility specialist assess your reproductive
               health and identify areas that could warrant further evaluation. It does not
@@ -529,8 +556,8 @@ const TestimonialsSection = ({ packageId }: { packageId: string }) => {
   if (isLoading || testimonials.length === 0) return null;
 
   return (
-    <section className="py-14 md:py-20" aria-labelledby="testimonials-heading">
-      <div className="container mx-auto px-4">
+    <section className="py-12 sm:py-20" aria-labelledby="testimonials-heading">
+      <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
         <SectionHeading
           id="testimonials-heading"
           eyebrow="In their words"
@@ -558,7 +585,7 @@ const RelatedPackageCard = ({ pkg }: { pkg: FertilityPackage }) => {
       <p className="text-[11px] font-semibold uppercase tracking-widest text-primary mb-1">
         {pkg.category}
       </p>
-      <h3 className="font-serif text-lg font-bold text-foreground group-hover:text-primary transition-colors">
+      <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
         {pkg.name}
       </h3>
       <p className="text-sm text-muted-foreground mt-2 flex-1 leading-relaxed">
