@@ -1,6 +1,62 @@
 import { Link } from "react-router-dom";
 import { Phone, Mail, MessageCircle, MapPin } from "lucide-react";
 
+/**
+ * Footer specialty links. Entries with a `to` are real internal links (good for
+ * crawl depth); the rest still scroll to the homepage specialties section.
+ */
+const SPECIALTY_LINKS: {
+  specialty: string;
+  treatments: { label: string; to?: string }[];
+}[] = [
+  {
+    specialty: "Gynaecology",
+    treatments: [
+      { label: "Hysterectomy", to: "/hysterectomy-hyderabad" },
+      { label: "Fibroid Surgery" },
+      { label: "Ovarian Cyst Removal" },
+      { label: "Laparoscopic Surgery" },
+      { label: "Endometriosis Treatment" },
+      { label: "PCOS Management" },
+      { label: "Uterine Prolapse Surgery" },
+    ],
+  },
+  {
+    specialty: "Maternity",
+    treatments: [
+      { label: "Normal Delivery" },
+      { label: "C-Section Delivery" },
+      { label: "High-Risk Pregnancy Care" },
+      { label: "Prenatal Screening" },
+      { label: "Postpartum Care" },
+    ],
+  },
+  {
+    specialty: "Fertility",
+    treatments: [
+      { label: "Fertility Packages", to: "/fertility-packages" },
+      { label: "Fertility Health Check", to: "/fertility-packages/fertility-health-check" },
+      {
+        label: "Complete Fertility Assessment",
+        to: "/fertility-packages/complete-fertility-assessment",
+      },
+      {
+        label: "Couples Fertility Assessment",
+        to: "/fertility-packages/couples-fertility-assessment",
+      },
+      {
+        label: "Egg Freezing Readiness Check",
+        to: "/fertility-packages/egg-freezing-readiness-check",
+      },
+      {
+        label: "Fertility Expert Consultation",
+        to: "/fertility-packages/fertility-expert-consultation",
+      },
+      { label: "IVF Treatment", to: "/ivf-bangalore" },
+    ],
+  },
+];
+
 const Footer = () => (
   <footer className="bg-navy text-primary-foreground py-12">
     <div className="container mx-auto px-4">
@@ -17,6 +73,7 @@ const Footer = () => (
           <h4 className="font-semibold text-sm mb-3">Quick Links</h4>
           <ul className="space-y-2 text-sm text-primary-foreground/60">
             <li><Link to="/" className="hover:text-primary-foreground">Home</Link></li>
+            <li><Link to="/fertility-packages" className="hover:text-primary-foreground">Fertility Packages</Link></li>
             <li><a href="#specialties" className="hover:text-primary-foreground">Treatments</a></li>
             <li><a href="#surgeons" className="hover:text-primary-foreground">Surgeons</a></li>
             <li><a href="#why-us" className="hover:text-primary-foreground">Why Us</a></li>
@@ -46,17 +103,17 @@ const Footer = () => (
 
       {/* Treatments by Specialty */}
       <div className="border-t border-primary-foreground/10 mt-8 pt-6 grid sm:grid-cols-3 gap-6">
-        {[
-          { specialty: "Gynaecology", treatments: ["Hysterectomy", "Fibroid Surgery", "Ovarian Cyst Removal", "Laparoscopic Surgery", "Endometriosis Treatment", "PCOS Management", "Uterine Prolapse Surgery"] },
-          { specialty: "Maternity", treatments: ["Normal Delivery", "C-Section Delivery", "High-Risk Pregnancy Care", "Prenatal Screening", "Postpartum Care"] },
-          { specialty: "Fertility", treatments: ["IVF Treatment", "IUI Treatment", "Egg Freezing", "ICSI Treatment", "Fertility Assessment", "Male Infertility Treatment"] },
-        ].map((s) => (
+        {SPECIALTY_LINKS.map((s) => (
           <div key={s.specialty}>
             <h4 className="font-serif text-base font-bold text-primary-foreground mb-3">{s.specialty}</h4>
             <ul className="space-y-1.5 text-sm text-primary-foreground/60">
               {s.treatments.map((t) => (
-                <li key={t}>
-                  <a href="#specialties" className="hover:text-primary-foreground transition-colors">{t}</a>
+                <li key={t.label}>
+                  {t.to ? (
+                    <Link to={t.to} className="hover:text-primary-foreground transition-colors">{t.label}</Link>
+                  ) : (
+                    <a href="#specialties" className="hover:text-primary-foreground transition-colors">{t.label}</a>
+                  )}
                 </li>
               ))}
             </ul>
