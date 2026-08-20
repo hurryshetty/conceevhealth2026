@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import PageHero from "@/components/layout/PageHero";
 import LeadFormModal from "@/components/LeadFormModal";
 import { useDoctors } from "@/hooks/useDoctors";
 
@@ -52,14 +53,12 @@ const Doctors = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <section className="bg-gradient-to-br from-primary/10 via-background to-secondary/20 py-12 md:py-16">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="font-serif text-3xl md:text-5xl font-bold text-foreground mb-3">Our Expert Doctors</h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Browse our network of {doctors.length}+ top specialists across cities.
-          </p>
-        </div>
-      </section>
+      <PageHero
+        eyebrow="Find the right doctor"
+        title="Meet doctors you can trust."
+        description={`Experienced specialists with verified credentials. Browse ${doctors.length}+ doctors across our network and book a consultation that suits you.`}
+        crumbs={[{ label: "Doctors" }]}
+      />
 
       <div className="container mx-auto px-4 py-10">
         <div className="flex flex-col md:flex-row md:items-center gap-3 mb-8">

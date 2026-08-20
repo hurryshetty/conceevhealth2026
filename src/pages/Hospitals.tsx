@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import PageHero from "@/components/layout/PageHero";
 import LeadFormModal from "@/components/LeadFormModal";
 import { useLocations } from "@/hooks/useLocations";
 import { useCities } from "@/hooks/useLocations";
@@ -76,17 +77,12 @@ const Hospitals = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      {/* Hero */}
-      <section className="bg-gradient-to-br from-primary/10 via-background to-secondary/20 py-12 md:py-16">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="font-serif text-3xl md:text-5xl font-bold text-foreground mb-3">
-            Our Partner Hospitals
-          </h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Browse {locations.length}+ trusted hospitals across our network for Gynecology, Maternity, and Fertility treatments.
-          </p>
-        </div>
-      </section>
+      <PageHero
+        eyebrow="Partner network"
+        title="Trusted hospitals near you."
+        description={`Browse ${locations.length}+ hospitals across our network for gynaecology, maternity and fertility care — with the specialities each one offers set out clearly.`}
+        crumbs={[{ label: "Hospitals" }]}
+      />
 
       <div className="container mx-auto px-4 py-10">
         {/* Filters */}

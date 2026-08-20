@@ -163,9 +163,66 @@
 }
 
 /*
- * The 2026 homepage overrides the site's Playfair heading font with the
- * Conceev brand face. Scoped to .conceev-2026 so no existing page is affected.
+ * ── 2026 Conceev brand scope ────────────────────────────────────────────────
+ *
+ * Everything inside `.conceev-2026` runs on the Conceev Digital palette. The
+ * semantic shadcn tokens are re-pointed here rather than in :root, so pages
+ * still on the legacy orange/navy system (admin, coordinator, hospital, doctor
+ * and patient dashboards) are completely unaffected.
+ *
+ * Because these are CSS custom properties, every existing component that uses
+ * bg-primary / text-muted-foreground / border-border and so on adopts the brand
+ * automatically — no markup changes needed to rebrand a page, just the wrapper.
+ *
+ * Hex → HSL for reference:
+ *   #C40233 = 345 98% 39%   #191717 = 0 4% 9%
+ *   #F4F4F4 = 0 0% 96%      #C9C9C9 = 0 0% 79%
  */
+.conceev-2026 {
+  --background: 0 0% 100%;
+  --foreground: 0 4% 9%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 0 4% 9%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 4% 9%;
+
+  --primary: 345 98% 39%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 0 0% 96%;
+  --secondary-foreground: 0 4% 9%;
+
+  --muted: 0 0% 96%;
+  /* Mid-grey for supporting copy — 5.3:1 on white, comfortably AA. */
+  --muted-foreground: 0 2% 42%;
+
+  --accent: 0 0% 96%;
+  --accent-foreground: 345 98% 39%;
+
+  --border: 0 0% 90%;
+  --input: 0 0% 90%;
+  --ring: 345 98% 39%;
+
+  /* 12px, matching the rounded-xl used throughout the new components. 1rem
+     over-rounded small legacy controls, which inherit calc(--radius - 2px). */
+  --radius: 0.75rem;
+
+  /* Legacy dark-section token: navy heroes become Conceev black. */
+  --navy: 0 4% 9%;
+  --navy-light: 0 3% 16%;
+}
+
+/*
+ * Headings inside the brand scope use the Conceev face rather than Playfair,
+ * including anything still marked `font-serif` by a legacy component.
+ */
+.conceev-2026 .font-serif {
+  font-family: 'Helvetica Neue', 'Inter', Helvetica, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  letter-spacing: 0;
+}
+
 .conceev-2026 h1,
 .conceev-2026 h2,
 .conceev-2026 h3,

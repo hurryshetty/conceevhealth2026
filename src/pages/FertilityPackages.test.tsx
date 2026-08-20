@@ -160,10 +160,18 @@ describe("/fertility-packages/:slug", () => {
   it("builds a WhatsApp link carrying the package name", async () => {
     renderAt("/fertility-packages/egg-freezing-readiness-check");
 
-    const links = await screen.findAllByRole("link", { name: /whatsapp/i });
-    const href = links[0].getAttribute("href")!;
-    expect(href).toContain("wa.me/");
-    expect(decodeURIComponent(href)).toContain("Egg Freezing Readiness Check");
+    // The shared footer renders a static WhatsApp link immediately, so wait for
+    // the package itself to load before collecting links — otherwise
+    // findAllByRole resolves on the footer alone.
+    // The h1 is the package's hero_title, and only renders once it has loaded.
+    await screen.findByRole("heading", { level: 1 });
+
+    const links = screen.getAllByRole("link", { name: /whatsapp/i });
+    const hrefs = links.map((l) => decodeURIComponent(l.getAttribute("href") ?? ""));
+    expect(hrefs.every((h) => h.includes("wa.me/"))).toBe(true);
+    // The footer link is generic, so assert a package-specific one exists
+    // rather than relying on DOM order.
+    expect(hrefs.some((h) => h.includes("Egg Freezing Readiness Check"))).toBe(true);
   });
 
   it("renders a not-found state for an unknown slug", async () => {

@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
 import { captureAttribution } from "@/lib/analytics";
 
@@ -94,6 +94,19 @@ const ProfileSettings = lazy(() => import("./pages/profile/ProfileSettings"));
 
 const queryClient = new QueryClient();
 
+/**
+ * Brand scope for the public site.
+ *
+ * `conceev-2026` re-points the semantic design tokens (see index.css), so every
+ * public page renders on the Conceev palette and type face. Authenticated
+ * routes sit outside this and keep the existing system.
+ */
+const PublicShell = () => (
+  <div className="conceev-2026 bg-white font-brand antialiased">
+    <Outlet />
+  </div>
+);
+
 const RouteFallback = () => (
   <div className="flex min-h-[50vh] items-center justify-center" role="status" aria-live="polite">
     <span className="sr-only">Loading</span>
@@ -127,7 +140,13 @@ const App = () => (
         <AttributionCapture />
         <Suspense fallback={<RouteFallback />}>
           <Routes>
-            {/* Public */}
+            {/*
+              Public site. PublicShell applies the conceev-2026 brand scope, so
+              every page below inherits the Conceev palette and type face — the
+              re-pointed tokens in index.css restyle existing components without
+              touching their markup. Authenticated routes stay outside it.
+            */}
+            <Route element={<PublicShell />}>
             {/* 2026 redesign is now the live homepage. */}
             <Route path="/" element={<HomepageRedesign />} />
             {/* Kept so existing preview links still work; renders noindex. */}
@@ -156,6 +175,7 @@ const App = () => (
             <Route path="/refund-policy" element={<RefundPolicy />} />
             <Route path="/register-your-hospital" element={<HospitalPartnership />} />
             <Route path="/register-as-doctor" element={<DoctorPartnership />} />
+            </Route>
 
             {/* Admin */}
             <Route path="/admin/login" element={<AdminLogin />} />

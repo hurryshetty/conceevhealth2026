@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import PageHero from "@/components/layout/PageHero";
 import LeadFormModal from "@/components/LeadFormModal";
 import { useSpecialties } from "@/hooks/useSpecialties";
 import { usePackages } from "@/hooks/usePackages";
@@ -29,17 +30,12 @@ const Packages = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      {/* Hero */}
-      <section className="bg-navy text-primary-foreground py-16 md:py-20">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="font-serif text-3xl md:text-5xl font-bold mb-4">
-            All Treatment Packages
-          </h1>
-          <p className="text-primary-foreground/70 max-w-2xl mx-auto text-lg">
-            Transparent, fixed-price packages across Gynaecology, Maternity & Fertility — no hidden costs.
-          </p>
-        </div>
-      </section>
+      <PageHero
+        eyebrow="Treatments"
+        title="Transparent, fixed-price treatment packages."
+        description="Gynaecology, maternity and fertility procedures with the inclusions and the price set out up front — no hidden costs."
+        crumbs={[{ label: "Treatment Packages" }]}
+      />
 
       {/* Tabs + Packages */}
       <section className="py-12 md:py-16">

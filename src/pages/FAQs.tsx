@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/accordion";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import PageHero from "@/components/layout/PageHero";
 
 // ─── FAQ Data ──────────────────────────────────────────────────────────────────
 
@@ -224,37 +225,36 @@ const FAQs = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      {/* ── Hero ─────────────────────────────────────────────────────────────── */}
-      <section className="bg-gradient-to-br from-primary/10 via-background to-secondary/20 py-12 md:py-16">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="font-serif text-3xl md:text-5xl font-bold text-foreground mb-3">
-            Frequently Asked Questions
-          </h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto mb-8">
-            Find answers to common questions about Conceev Health, treatments, doctor
-            consultations, and hospital partnerships.
-          </p>
-
-          {/* Search */}
-          <div className="relative max-w-xl mx-auto">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search your question…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-11 pr-10 h-12 rounded-full text-sm shadow-sm"
-            />
-            {search && (
-              <button
-                onClick={() => setSearch("")}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
+      <PageHero
+        eyebrow="Help centre"
+        title="Questions, answered."
+        description="Common questions about Conceev Health, treatments, doctor consultations and hospital partnerships."
+        crumbs={[{ label: "FAQs" }]}
+      >
+        <div className="relative max-w-xl">
+          <Search
+            className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-conceev-grey-mid"
+            aria-hidden="true"
+          />
+          <Input
+            placeholder="Search your question…"
+            aria-label="Search frequently asked questions"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-12 rounded-xl border-conceev-black/12 bg-white pl-11 pr-10 text-sm"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              aria-label="Clear search"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-conceev-grey-mid transition-colors hover:text-conceev-black"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          )}
         </div>
-      </section>
+      </PageHero>
 
       <div className="container mx-auto px-4 py-10 md:py-14">
         {/* ── Category Tabs ─────────────────────────────────────────────────── */}
