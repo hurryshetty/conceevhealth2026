@@ -7,16 +7,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { COUNTRY_CODES as countryCodes } from "@/config/site";
 
 const surgeries = ["IVF", "IUI", "Hysterectomy", "Fibroid Surgery", "Ovarian Cyst Removal", "Normal Delivery", "C-Section", "Other"];
-
-const countryCodes = [
-  { code: "+91", flag: "🇮🇳", name: "India", maxLen: 10 },
-  { code: "+1", flag: "🇺🇸", name: "US", maxLen: 10 },
-  { code: "+44", flag: "🇬🇧", name: "UK", maxLen: 11 },
-  { code: "+971", flag: "🇦🇪", name: "UAE", maxLen: 9 },
-  { code: "+65", flag: "🇸🇬", name: "SG", maxLen: 8 },
-];
 
 interface LeadFormModalProps {
   open: boolean;
