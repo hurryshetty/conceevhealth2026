@@ -128,13 +128,12 @@ const App = () => (
         <Suspense fallback={<RouteFallback />}>
           <Routes>
             {/* Public */}
-            <Route path="/" element={<Index />} />
-            {/*
-              2026 homepage redesign. Served from a preview path so the live
-              homepage is unchanged until it is signed off — to promote it,
-              swap this element into the "/" route above.
-            */}
+            {/* 2026 redesign is now the live homepage. */}
+            <Route path="/" element={<HomepageRedesign />} />
+            {/* Kept so existing preview links still work; renders noindex. */}
             <Route path="/homepage-preview" element={<HomepageRedesign />} />
+            {/* Previous homepage, retained for reference and comparison. */}
+            <Route path="/home-legacy" element={<Index />} />
             <Route path="/ivf-bangalore" element={<IVFBangalore />} />
             <Route path="/ivf-package" element={<IVFPackageLanding />} />
             <Route path="/hysterectomy-hyderabad" element={<HysterectomyHyderabad />} />

@@ -211,6 +211,44 @@ describe("2026 homepage", () => {
     expect(canonical?.endsWith("/")).toBe(true);
   });
 
+  it("offers popular speciality shortcuts in the search module", async () => {
+    renderAt();
+    // Wait for the specialities query to resolve before asserting.
+    const search = (await screen.findByText("Popular:")).closest("section")!;
+    expect(
+      within(search).getByRole("heading", { name: /what healthcare are you looking for/i })
+    ).toBeInTheDocument();
+    // Drawn from real specialities, so every chip resolves to results.
+    expect(
+      within(search).getByRole("button", { name: "Female Fertility" })
+    ).toBeInTheDocument();
+    expect(within(search).queryByRole("button", { name: "Training Courses" })).toBeNull();
+  });
+
+  it("keeps the final CTA buttons on one line", async () => {
+    renderAt();
+    const cta = (await screen.findByRole("heading", {
+      name: /your health deserves better care/i,
+    })).closest("section")!;
+    // These previously broke to "Find a / Doctor" inside a 34ch column.
+    expect(within(cta).getByRole("button", { name: /find a doctor/i })).toHaveClass(
+      "whitespace-nowrap"
+    );
+    expect(within(cta).getByRole("link", { name: /explore hospitals/i })).toHaveClass(
+      "whitespace-nowrap"
+    );
+  });
+
+  it("fills the final CTA with reassurances rather than dead space", async () => {
+    renderAt();
+    const cta = (await screen.findByRole("heading", {
+      name: /your health deserves better care/i,
+    })).closest("section")!;
+    expect(within(cta).getByText("Verified healthcare")).toBeInTheDocument();
+    expect(within(cta).getByText("Transparent information")).toBeInTheDocument();
+    expect(within(cta).getByText(/coordinator on every booking/i)).toBeInTheDocument();
+  });
+
   it("exposes a skip link and a single main landmark", async () => {
     renderAt();
     await screen.findByRole("heading", { level: 1 });

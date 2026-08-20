@@ -4,6 +4,7 @@ import { Building2, ChevronDown, FlaskConical, Loader2, MapPin, Package, Search,
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useLocations } from "@/hooks/useLocations";
+import { useSpecialties } from "@/hooks/useSpecialties";
 
 /**
  * Primary healthcare discovery module.
@@ -61,6 +62,13 @@ const HealthcareSearch = forwardRef<HTMLDivElement>((_props, ref) => {
   const cities = Array.from(
     new Set(locations.map((l) => l.city_name).filter((c): c is string => Boolean(c)))
   ).sort();
+
+  // Popular terms come from real specialities, so every chip resolves to results.
+  const { data: specialities = [] } = useSpecialties();
+  const popular = specialities
+    .filter((s) => !["Other Issues", "Training Courses"].includes(s.name))
+    .slice(0, 4)
+    .map((s) => s.name);
 
   useEffect(() => {
     const onClickAway = (event: MouseEvent) => {
@@ -186,16 +194,34 @@ const HealthcareSearch = forwardRef<HTMLDivElement>((_props, ref) => {
     .filter((g) => g.items.length > 0);
 
   return (
-    <section ref={ref} className="scroll-mt-24 bg-white py-16 sm:py-20" aria-labelledby="search-heading">
-      <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
-        <h2
-          id="search-heading"
-          className="max-w-[18ch] text-[28px] font-bold leading-[1.12] text-conceev-black sm:text-[38px]"
-        >
-          What healthcare are you looking for?
-        </h2>
+    <section ref={ref} className="scroll-mt-24 bg-white py-20 sm:py-24" aria-labelledby="search-heading">
+      {/*
+        Asymmetric two-column: framing copy on the left, the search module on
+        the right. A full-width bar under a short heading left a large dead
+        zone on the right of the 1280px container.
+      */}
+      <div className="mx-auto grid max-w-[1280px] gap-10 px-5 sm:px-8 lg:grid-cols-[0.72fr_1fr] lg:items-start lg:gap-16">
+        <div className="lg:pt-2">
+          <p className="mb-4 text-[12px] font-semibold uppercase tracking-[0.18em] text-conceev-red">
+            Start here
+          </p>
+          <h2
+            id="search-heading"
+            className="text-[30px] font-bold leading-[1.1] text-conceev-black sm:text-[40px]"
+          >
+            What healthcare are you looking for?
+          </h2>
+          <p className="mt-4 max-w-[38ch] text-[16px] leading-[1.65] text-conceev-black/60">
+            Search across verified doctors, specialities, hospitals and treatments — then
+            narrow by the city you want to be seen in.
+          </p>
+        </div>
 
-        <div ref={containerRef} className="relative mt-8">
+        {/* The search itself sits in a raised card so it reads as one module. */}
+        <div
+          ref={containerRef}
+          className="relative rounded-[24px] border border-conceev-black/[0.09] bg-conceev-offwhite/70 p-5 sm:p-7"
+        >
           {/* Category chips */}
           <div
             role="group"
@@ -212,7 +238,7 @@ const HealthcareSearch = forwardRef<HTMLDivElement>((_props, ref) => {
                   "shrink-0 rounded-lg px-4 py-2 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-conceev-red focus-visible:ring-offset-2",
                   category === c.id
                     ? "bg-conceev-black text-white"
-                    : "bg-conceev-offwhite text-conceev-black/60 hover:text-conceev-black"
+                    : "bg-white text-conceev-black/60 hover:text-conceev-black"
                 )}
               >
                 {c.label}
@@ -278,12 +304,36 @@ const HealthcareSearch = forwardRef<HTMLDivElement>((_props, ref) => {
             </div>
           </form>
 
+          {/* Popular searches — real specialities, so these always resolve. */}
+          {popular.length > 0 && (
+            <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
+              <span className="text-[12px] font-medium text-conceev-grey-mid">
+                Popular:
+              </span>
+              {popular.map((term) => (
+                <button
+                  key={term}
+                  type="button"
+                  onClick={() => {
+                    setQuery(term);
+                    setOpen(true);
+                    runSearch(term, category, location);
+                    inputRef.current?.focus();
+                  }}
+                  className="rounded-full border border-conceev-black/12 bg-white px-3 py-1.5 text-[13px] font-medium text-conceev-black/70 transition-colors hover:border-conceev-red hover:text-conceev-red focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-conceev-red focus-visible:ring-offset-2"
+                >
+                  {term}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Suggestions */}
           {open && query.trim().length >= 2 && (
             <div
               role="listbox"
               aria-label="Search suggestions"
-              className="absolute left-0 right-0 top-full z-30 mt-2 max-h-[380px] overflow-y-auto rounded-2xl border border-conceev-black/10 bg-white py-2 shadow-[0_24px_70px_-30px_rgba(25,23,23,0.5)]"
+              className="absolute left-5 right-5 top-[136px] z-30 max-h-[340px] overflow-y-auto rounded-2xl border border-conceev-black/10 bg-white py-2 shadow-[0_24px_70px_-30px_rgba(25,23,23,0.5)] sm:left-7 sm:right-7 sm:top-[152px]"
             >
               {loading && (
                 <p className="flex items-center gap-2 px-5 py-3 text-[14px] text-conceev-grey-mid">

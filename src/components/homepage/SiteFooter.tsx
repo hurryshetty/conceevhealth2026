@@ -1,5 +1,16 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Facebook, Instagram, Linkedin, Mail, MessageCircle, Phone } from "lucide-react";
+import {
+  ArrowRight,
+  BadgeCheck,
+  Eye,
+  Facebook,
+  HeartHandshake,
+  Instagram,
+  Linkedin,
+  Mail,
+  MessageCircle,
+  Phone,
+} from "lucide-react";
 import { BRAND_TAGLINE, FOOTER_COLUMNS } from "@/data/homepageContent";
 import { SITE, whatsappLink } from "@/config/site";
 
@@ -14,49 +25,91 @@ interface FinalCtaProps {
   onFindDoctor: () => void;
 }
 
+/** Restates promises already made on the page — nothing new is claimed here. */
+const CTA_ASSURANCES = [
+  {
+    title: "Verified healthcare",
+    description: "Every doctor and hospital is checked before they are listed.",
+    Icon: BadgeCheck,
+  },
+  {
+    title: "Transparent information",
+    description: "Clear inclusions and clear pricing, before you commit.",
+    Icon: Eye,
+  },
+  {
+    title: "A coordinator on every booking",
+    description: "Someone confirms your appointment and stays with you.",
+    Icon: HeartHandshake,
+  },
+] as const;
+
 export const FinalCta = ({ onFindDoctor }: FinalCtaProps) => (
   <section className="bg-white pb-20 sm:pb-28" aria-labelledby="final-cta-heading">
     <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
-      <div className="relative overflow-hidden rounded-[24px] bg-conceev-gradient px-7 py-16 sm:px-14 sm:py-20">
+      <div className="relative overflow-hidden rounded-[24px] bg-conceev-gradient px-7 py-14 sm:px-14 sm:py-16">
         {/* Restrained depth — one soft light source, no colourful wash. */}
         <div
           className="pointer-events-none absolute -right-20 -top-24 h-[420px] w-[420px] rounded-full bg-white/[0.06] blur-[100px]"
           aria-hidden="true"
         />
-        <div className="relative max-w-[34ch]">
-          <h2
-            id="final-cta-heading"
-            className="text-[34px] font-bold leading-[1.06] text-white sm:text-[46px]"
-          >
-            Your health deserves better care.
-          </h2>
-          {/*
-            The brand ramp reaches pure Conceev red, where anything below
-            white/85 drops under 4.5:1. Held at /85 so the copy stays legible
-            wherever the text block lands on the gradient at any viewport width.
-          */}
-          <p className="mt-5 max-w-[44ch] text-[16px] leading-[1.65] text-white/85">
-            Find trusted doctors, hospitals and healthcare services with Conceev Health.
-          </p>
-          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-            <button
-              type="button"
-              onClick={onFindDoctor}
-              className="group inline-flex items-center justify-center gap-2 rounded-xl bg-white px-7 py-3.5 text-[15px] font-semibold text-conceev-black transition-transform duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-conceev-black"
+
+        {/* Two columns so the panel is not two-thirds empty on desktop. */}
+        <div className="relative grid gap-12 lg:grid-cols-[1fr_0.85fr] lg:items-center lg:gap-20">
+          <div>
+            <h2
+              id="final-cta-heading"
+              className="max-w-[16ch] text-[34px] font-bold leading-[1.06] text-white sm:text-[46px]"
             >
-              Find a Doctor
-              <ArrowRight
-                className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
-                aria-hidden="true"
-              />
-            </button>
-            <Link
-              to="/hospitals"
-              className="inline-flex items-center justify-center rounded-xl border border-white/25 px-7 py-3.5 text-[15px] font-semibold text-white transition-colors duration-200 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-conceev-black"
-            >
-              Explore Hospitals
-            </Link>
+              Your health deserves better care.
+            </h2>
+            {/*
+              The brand ramp reaches pure Conceev red, where anything below
+              white/85 drops under 4.5:1. Held at /85 so the copy stays legible
+              wherever the text lands on the gradient at any viewport width.
+            */}
+            <p className="mt-5 max-w-[44ch] text-[16px] leading-[1.65] text-white/85">
+              Find trusted doctors, hospitals and healthcare services with Conceev Health.
+            </p>
+
+            {/* whitespace-nowrap: these were breaking to "Find a / Doctor". */}
+            <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <button
+                type="button"
+                onClick={onFindDoctor}
+                className="group inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-white px-7 py-3.5 text-[15px] font-semibold text-conceev-black transition-transform duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-conceev-black"
+              >
+                Find a Doctor
+                <ArrowRight
+                  className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                  aria-hidden="true"
+                />
+              </button>
+              <Link
+                to="/hospitals"
+                className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-xl border border-white/30 px-7 py-3.5 text-[15px] font-semibold text-white transition-colors duration-200 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-conceev-black"
+              >
+                Explore Hospitals
+              </Link>
+            </div>
           </div>
+
+          {/* Reassurance column — same promises made earlier on the page. */}
+          <ul className="divide-y divide-white/[0.14] border-y border-white/[0.14]">
+            {CTA_ASSURANCES.map(({ title, description, Icon }) => (
+              <li key={title} className="flex items-start gap-4 py-5">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/[0.12] text-white">
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[15px] font-semibold text-white">{title}</p>
+                  <p className="mt-0.5 text-[13px] leading-[1.55] text-white/85">
+                    {description}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </div>

@@ -62,10 +62,14 @@ export const HealthcareJourney = () => {
           </h2>
         </div>
 
-        <ol className="relative mt-14 grid gap-10 md:grid-cols-4 md:gap-6">
-          {/* Connecting line — horizontal on desktop, vertical on mobile. */}
+        <ol className="relative mt-14 grid gap-10 md:grid-cols-4 md:gap-8">
+          {/*
+            Connector. Inset to the centre of the first and last markers — a
+            full-bleed rule overshot past the final step and ran to the
+            container edge. Vertical on mobile, horizontal from md up.
+          */}
           <span
-            className="absolute left-[19px] top-2 bottom-2 w-px bg-conceev-black/10 md:left-0 md:right-0 md:top-[19px] md:h-px md:w-auto"
+            className="absolute left-[27px] top-4 bottom-4 w-px bg-conceev-black/[0.12] md:left-[12.5%] md:right-[12.5%] md:top-[28px] md:bottom-auto md:h-px md:w-auto"
             aria-hidden="true"
           />
           {JOURNEY_STAGES.map((stage, i) => {
@@ -76,17 +80,18 @@ export const HealthcareJourney = () => {
                 className={cn("relative flex gap-5 md:block", inView && "animate-rise-in")}
                 style={inView ? { animationDelay: `${i * 90}ms`, opacity: 0 } : undefined}
               >
-                <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-conceev-black/10 bg-white text-conceev-red md:mb-6">
-                  <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
+                {/* Ring sits on the connector; the white fill masks the line. */}
+                <span className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-conceev-black/[0.12] bg-white text-conceev-red ring-4 ring-white md:mb-7">
+                  <Icon className="h-5 w-5" aria-hidden="true" />
                 </span>
                 <div className="min-w-0 pb-2 md:pb-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-conceev-grey-mid">
+                  <p className="text-[12px] font-semibold tracking-[0.18em] text-conceev-red">
                     {stage.index}
                   </p>
-                  <h3 className="mt-1.5 text-[20px] font-semibold text-conceev-black">
+                  <h3 className="mt-2 text-[21px] font-semibold text-conceev-black">
                     {stage.title}
                   </h3>
-                  <p className="mt-2 max-w-[32ch] text-[14px] leading-[1.6] text-conceev-black/60">
+                  <p className="mt-2.5 max-w-[30ch] text-[14px] leading-[1.6] text-conceev-black/60">
                     {stage.description}
                   </p>
                 </div>
