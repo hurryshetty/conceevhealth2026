@@ -44,6 +44,19 @@ import {
   WhatYouLearn,
 } from "@/components/fertility/PackageSections";
 
+/** Shown in the hero's at-a-glance list; the rest roll into a counter. */
+const HERO_INCLUSION_COUNT = 4;
+
+/**
+ * Reassurances shown under the hero inclusions. These restate commitments the
+ * page already makes further down — nothing new is claimed here.
+ */
+const HERO_ASSURANCES = [
+  "Reviewed by a fertility specialist",
+  "No obligation to proceed",
+  "Full pricing confirmed before booking",
+];
+
 /** Order matches the page; ids are set on the corresponding <section>. */
 const DETAIL_SECTIONS = [
   { id: "overview", label: "Overview" },
@@ -120,7 +133,10 @@ const FertilityPackageDetail = () => {
   }
 
   const Icon = getFertilityIcon(pkg.icon);
-  const inclusionCount = flattenInclusions(pkg).length;
+  const allInclusions = flattenInclusions(pkg);
+  const inclusionCount = allInclusions.length;
+  const heroInclusions = allInclusions.slice(0, HERO_INCLUSION_COUNT);
+  const hiddenInclusionCount = inclusionCount - heroInclusions.length;
   const related = allPackages
     .filter((other) => other.slug !== pkg.slug)
     .sort((a, b) => Number(b.featured) - Number(a.featured))
@@ -226,7 +242,7 @@ const FertilityPackageDetail = () => {
                     {pkg.category}
                   </span>
                   {pkg.badge && (
-                    <span className="text-[11px] font-semibold uppercase tracking-wide bg-navy/5 text-navy border border-navy/15 px-2.5 py-1 rounded-full">
+                    <span className="rounded-full border border-conceev-black/12 bg-conceev-offwhite px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-conceev-black/70">
                       {pkg.badge}
                     </span>
                   )}
@@ -258,9 +274,66 @@ const FertilityPackageDetail = () => {
                   )}
                 </ul>
 
+                {/*
+                  At-a-glance inclusions.
+                  The left column previously stopped at the meta row while the
+                  summary card ran ~240px further down, leaving a large empty
+                  gap. Filling it with what the package actually contains also
+                  answers the first question a buyer has, without scrolling.
+                */}
+                <div className="mt-9 border-t border-border pt-7">
+                  <div className="mb-4 flex items-baseline justify-between gap-4">
+                    {/* "At a glance", not "What's included" — the full section
+                        further down owns that heading, and duplicating it would
+                        put two identical h2s in the outline. */}
+                    <h2 className="text-[12px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      At a glance
+                    </h2>
+                    <a
+                      href="#whats-included"
+                      className="rounded-sm text-[13px] font-medium text-primary transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      See full detail
+                    </a>
+                  </div>
+
+                  <ul className="grid gap-x-8 gap-y-2.5 sm:grid-cols-2">
+                    {heroInclusions.map((item) => (
+                      <li
+                        key={item.id}
+                        className="flex items-start gap-2.5 text-sm text-foreground/85"
+                      >
+                        <Check
+                          className="mt-0.5 h-4 w-4 shrink-0 text-primary"
+                          aria-hidden="true"
+                        />
+                        <span className="leading-snug">{item.label}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {hiddenInclusionCount > 0 && (
+                    <p className="mt-3 text-sm font-medium text-primary">
+                      + {hiddenInclusionCount} more included
+                    </p>
+                  )}
+
+                  <ul className="mt-7 flex flex-wrap gap-x-5 gap-y-2 text-[13px] text-muted-foreground">
+                    {HERO_ASSURANCES.map((assurance) => (
+                      <li key={assurance} className="flex items-center gap-1.5">
+                        <span
+                          className="h-1 w-1 rounded-full bg-primary"
+                          aria-hidden="true"
+                        />
+                        {assurance}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
                 {/* Mobile-only inline CTAs; also the sticky bar's reveal anchor. */}
                 <div id="package-hero-cta" className="flex flex-col sm:flex-row gap-3 mt-8 lg:hidden">
-                  <Button size="lg" className="rounded-full" onClick={() => openBooking("hero")}>
+                  <Button size="lg" className="rounded-xl" onClick={() => openBooking("hero")}>
                     Book Package
                   </Button>
                   <WhatsAppPackageButton pkg={pkg} source="hero" />
@@ -276,39 +349,44 @@ const FertilityPackageDetail = () => {
                   <PriceBlock pkg={pkg} size="lg" className="mb-5" />
 
                   <div className="hidden lg:flex flex-col gap-2.5 mb-5">
-                    <Button size="lg" className="rounded-full" onClick={() => openBooking("summary_card")}>
+                    <Button size="lg" className="rounded-xl" onClick={() => openBooking("summary_card")}>
                       Book Package
                     </Button>
                     <WhatsAppPackageButton pkg={pkg} source="summary_card" />
                   </div>
 
-                  <dl className="space-y-3 border-t border-border pt-5 text-sm">
-                    <div className="flex items-start justify-between gap-4">
-                      <dt className="text-muted-foreground">Inclusions</dt>
-                      <dd className="font-medium text-foreground text-right">
+                  {/*
+                    Short values sit inline; the long "Ideal for" value stacks
+                    beneath its label. Forcing it into a right-aligned column
+                    wrapped the label itself onto two lines.
+                  */}
+                  <dl className="divide-y divide-border border-t border-border text-sm">
+                    <div className="flex items-baseline justify-between gap-6 py-3">
+                      <dt className="shrink-0 text-muted-foreground">Inclusions</dt>
+                      <dd className="text-right font-medium text-foreground">
                         {inclusionCount} item{inclusionCount === 1 ? "" : "s"}
                       </dd>
                     </div>
-                    <div className="flex items-start justify-between gap-4">
-                      <dt className="text-muted-foreground">Ideal for</dt>
-                      <dd className="font-medium text-foreground text-right">
-                        {pkg.ideal_for_label}
-                      </dd>
-                    </div>
-                    <div className="flex items-start justify-between gap-4">
-                      <dt className="text-muted-foreground">Availability</dt>
-                      <dd className="font-medium text-foreground text-right">
+                    <div className="flex items-baseline justify-between gap-6 py-3">
+                      <dt className="shrink-0 text-muted-foreground">Availability</dt>
+                      <dd className="text-right font-medium text-foreground">
                         {availabilityLabel(pkg.availability_type)}
                       </dd>
                     </div>
                     {pkg.locations.length > 0 && (
-                      <div className="flex items-start justify-between gap-4">
-                        <dt className="text-muted-foreground">Locations</dt>
-                        <dd className="font-medium text-foreground text-right">
+                      <div className="flex items-baseline justify-between gap-6 py-3">
+                        <dt className="shrink-0 text-muted-foreground">Locations</dt>
+                        <dd className="text-right font-medium text-foreground">
                           {pkg.locations.join(", ")}
                         </dd>
                       </div>
                     )}
+                    <div className="py-3">
+                      <dt className="text-muted-foreground">Ideal for</dt>
+                      <dd className="mt-1 font-medium leading-snug text-foreground">
+                        {pkg.ideal_for_label}
+                      </dd>
+                    </div>
                   </dl>
 
                   {pkg.variants.length > 0 && (

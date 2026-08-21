@@ -174,6 +174,20 @@ describe("/fertility-packages/:slug", () => {
     expect(hrefs.some((h) => h.includes("Egg Freezing Readiness Check"))).toBe(true);
   });
 
+  it("previews the inclusions in the hero so the fold is not half empty", async () => {
+    renderAt("/fertility-packages/complete-fertility-assessment");
+    const heading = await screen.findByRole("heading", { name: /at a glance/i, level: 2 });
+    // The hero preview sits above the full section and links down to it.
+    const hero = heading.closest("section")!;
+    expect(within(hero).getByRole("link", { name: /see full detail/i })).toHaveAttribute(
+      "href",
+      "#whats-included"
+    );
+    // Real inclusion labels, not placeholders.
+    expect(within(hero).getByText("Ovarian reserve assessment")).toBeInTheDocument();
+    expect(within(hero).getByText(/reviewed by a fertility specialist/i)).toBeInTheDocument();
+  });
+
   it("offers in-page navigation across the long detail page", async () => {
     renderAt("/fertility-packages/complete-fertility-assessment");
     await screen.findByRole("heading", { level: 1 });

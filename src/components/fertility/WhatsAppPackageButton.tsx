@@ -64,7 +64,7 @@ const WhatsAppPackageButton = ({
   return (
     <Button
       variant={variant === "default" ? "default" : "outline"}
-      className={cn("rounded-full gap-2", className)}
+      className={cn("rounded-xl gap-2", className)}
       asChild
     >
       <a
